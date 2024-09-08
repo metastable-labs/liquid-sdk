@@ -1,18 +1,18 @@
 module.exports = {
-  preset: 'react-native',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  preset: "react-native",
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@simplewebauthn)/)',
+    "node_modules/(?!(react-native|@react-native|@simplewebauthn)/)",
   ],
-  setupFiles: ['<rootDir>/jest.setup.js'],
-  testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.[jt]sx?$',
+  setupFiles: ["<rootDir>/jest.setup.js"],
+  testRegex: "(/__tests__/.*|(\\.|/)(test|spec))\\.[jt]sx?$",
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    "^@/(.*)$": "<rootDir>/src/$1",
   },
   collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/index.{ts,native.ts}',
+    "src/**/*.{js,jsx,ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/index.{ts,native.ts}",
   ],
   coverageThreshold: {
     global: {
@@ -22,5 +22,5 @@ module.exports = {
       statements: 80,
     },
   },
-  testEnvironment: 'node',
+  testEnvironment: "node",
 };

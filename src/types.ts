@@ -1,5 +1,5 @@
-import { PasskeyRegistrationResult } from 'react-native-passkey/lib/typescript/Passkey';
-import { Address } from 'viem';
+import { PasskeyRegistrationResult } from "react-native-passkey/lib/typescript/Passkey";
+import { Address } from "viem";
 
 export interface TokenInfo {
   address: Address;
@@ -33,9 +33,9 @@ export interface PoolDetails {
 }
 
 export enum ActionType {
-  SWAP = 'SWAP',
-  DEPOSIT = 'DEPOSIT',
-  WITHDRAW = 'WITHDRAW',
+  SWAP = "SWAP",
+  DEPOSIT = "DEPOSIT",
+  WITHDRAW = "WITHDRAW",
 }
 
 export interface SwapAction {
@@ -76,7 +76,7 @@ export interface PublicKeyCredentialCreationOptions {
     name: string;
     displayName: string;
   };
-  pubKeyCredParams: Array<{alg: number; type: string}>;
+  pubKeyCredParams: Array<{ alg: number; type: string }>;
   timeout?: number;
   attestation?: string;
 }
@@ -92,6 +92,8 @@ export interface PublicKeyCredentialRequestOptions {
 }
 
 export interface PassKeyImplementation {
-  createPassKeyCredential: (options: PublicKeyCredentialCreationOptions) => Promise<PasskeyRegistrationResult | Credential>;
-  signWithPassKey: (options: PublicKeyCredentialRequestOptions) => Promise<Credential | any>;
+  createPassKeyCredential: (
+    options: PublicKeyCredentialCreationOptions,
+  ) => Promise<any>;
+  signWithPassKey: (options: PublicKeyCredentialRequestOptions) => Promise<any>;
 }
