@@ -203,3 +203,7 @@ try {
   console.error('Failed to get token list:', error);
 }
 ```
+
+## Notes
+Note: The `passkeyId` is crucial for identifying which PassKey to use in future authentications. 
+It should be stored securely and associated with the user's account. It is not a public key or signature, but rather an identifier for the credential.
