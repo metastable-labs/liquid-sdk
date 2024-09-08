@@ -8,10 +8,6 @@
 4. [getUserPools](#getuserpools)
 5. [getTokenBalance](#gettokenbalance)
 6. [getTokenList](#gettokenlist)
-7. [UserOperation Functions](#useroperation-functions)
-   - [createUserOperation](#createuseroperation)
-   - [estimateUserOperationGas](#estimateuseroperationgas)
-   - [sendUserOperation](#senduseroperation)
 
 ## LiquidSDK Class
 
