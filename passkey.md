@@ -101,3 +101,13 @@ In the PassKey authentication process:
 - This distribution of responsibilities ensures security (private keys never leave the user's device) while still allowing the server to control access to its resources.
 
 This approach leverages the security benefits of PassKeys/WebAuthn while minimizing the server's involvement in the actual authentication process.
+
+## BACKEND TODO
+
+- Create User with username
+- Generate registration options with username
+  - verify registration response
+  - extract public key and save in the user model db
+  - return the public key to the sdk
+- Generate authentication options with username
+  - verify authentication respons

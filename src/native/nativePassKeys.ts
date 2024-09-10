@@ -1,28 +1,31 @@
-import { Passkey } from 'react-native-passkey';
-import { PasskeyRegistrationResult } from 'react-native-passkey/lib/typescript/Passkey';
 import {
-  PassKeyImplementation,
-  PublicKeyCredentialCreationOptions,
-  PublicKeyCredentialRequestOptions,
-} from '../types';
+  Passkey,
+  PasskeyRegistrationResult,
+  PasskeyAuthResult,
+} from 'react-native-passkey/lib/typescript/Passkey';
+import { PassKeyImplementation } from '../types';
+import {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/types';
 
-// Initialize Passkey with your domain and app name
-const passkey = new Passkey('liquidsdkapp.com', 'Liquid SDK');
+export class NativePassKeys implements PassKeyImplementation {
+  private passkey: Passkey;
 
-export const nativePassKeys: PassKeyImplementation = {
-  createPassKeyCredential: async (
-    options: PublicKeyCredentialCreationOptions,
-  ): Promise<PasskeyRegistrationResult> => {
+  constructor(domain: string, appName: string) {
+    this.passkey = new Passkey(domain, appName);
+  }
+
+  async createPassKeyCredential(
+    options: PublicKeyCredentialCreationOptionsJSON,
+  ): Promise<PasskeyRegistrationResult> {
     try {
-      const challenge = options.challenge;
-      const userId = options.user.id;
-
-      if (typeof challenge !== 'string' || typeof userId !== 'string') {
-        throw new Error('Invalid challenge or user ID format');
-      }
-
-      const result = await passkey.register(challenge, userId);
-      return result;
+      // Convert the challenge to a string if it's not already
+      const challenge =
+        typeof options.challenge === 'string'
+          ? options.challenge
+          : bufferToBase64URLString(options.challenge);
+      return await this.passkey.register(challenge, options.user.id as string);
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to create PassKey: ${error.message}`);
@@ -30,18 +33,18 @@ export const nativePassKeys: PassKeyImplementation = {
         throw new Error('Failed to create PassKey: Unknown error');
       }
     }
-  },
+  }
 
-  signWithPassKey: async (options: PublicKeyCredentialRequestOptions) => {
+  async signWithPassKey(
+    options: PublicKeyCredentialRequestOptionsJSON,
+  ): Promise<PasskeyAuthResult> {
     try {
-      const challenge = options.challenge;
-
-      if (typeof challenge !== 'string') {
-        throw new Error('Invalid challenge format');
-      }
-
-      const result = await passkey.auth(challenge);
-      return result;
+      // Convert the challenge to a string if it's not already
+      const challenge =
+        typeof options.challenge === 'string'
+          ? options.challenge
+          : bufferToBase64URLString(options.challenge);
+      return await this.passkey.auth(challenge);
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to sign with PassKey: ${error.message}`);
@@ -49,5 +52,13 @@ export const nativePassKeys: PassKeyImplementation = {
         throw new Error('Failed to sign with PassKey: Unknown error');
       }
     }
-  },
-};
+  }
+}
+
+// Helper function to convert ArrayBuffer to base64 string
+function bufferToBase64URLString(buffer: ArrayBuffer): string {
+  return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(buffer))))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}

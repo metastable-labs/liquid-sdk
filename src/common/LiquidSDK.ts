@@ -106,23 +106,25 @@ export class LiquidSDK {
     }
   }
 
-  async createSmartAccount(username: string): Promise<{ address: Address; passKeyId: string }> {
+  async createSmartAccount(username: string): Promise<{ address: Address }> {
     try {
+      // Fetch registration options from the backend
       const options = await this.getRegistrationOptions(username);
-      const credential = await this.passKeyImpl.createPassKeyCredential(options as any);
 
-      let credentialId: string;
-      if ('id' in credential) {
-        // Web credential
-        credentialId = credential.id;
-      } else {
-        // Native credential
-        credentialId = credential.credentialID;
+      const passKeyCreationResponse = await this.passKeyImpl.createPassKeyCredential(options);
+
+      // Send attestation data to backend for verification
+      const verificationResponse = await this.verifyRegistration(passKeyCreationResponse);
+
+      if (!verificationResponse.verified) {
+        throw new Error('Attestation verification failed');
       }
 
-      const address = await this.deploySmartAccount(credential);
+      const address = await this.deploySmartAccount(verificationResponse.publicKey);
 
-      return { address, passKeyId: credentialId };
+      return {
+        address,
+      };
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new PassKeyError(`Failed to create smart account: ${error.message}`);
@@ -168,6 +170,7 @@ export class LiquidSDK {
     }
   }
 
+  // ideally this should be from the backend
   private async getRegistrationOptions(
     username: string,
   ): Promise<PublicKeyCredentialCreationOptions> {
@@ -188,45 +191,31 @@ export class LiquidSDK {
     };
   }
 
-  private async deploySmartAccount(credential: any): Promise<Address> {
+  private async deploySmartAccount(publicKey: string): Promise<Address> {
     try {
-      const salt = parseEther('1'); // Use a unique salt for each deployment
-      const initCode = encodeFunctionData({
-        abi: CoinbaseSmartWalletABI,
-        functionName: 'initialize',
-        args: [credential.id],
-      });
+      const salt = parseEther('1'); //TODO: will use a unique nonce here
+      const owners = [publicKey];
 
-      // Encode the entire function call
-      const calldata = encodeFunctionData({
+      const predictedAddress = (await this.publicClient.readContract({
+        address: COINBASE_WALLET_FACTORY_ADDRESS,
+        abi: CoinbaseSmartWalletFactoryABI,
+        functionName: 'getAddress',
+        args: [owners, salt],
+      })) as Address;
+
+      const initCode = encodeFunctionData({
         abi: CoinbaseSmartWalletFactoryABI,
         functionName: 'createAccount',
-        args: [initCode, salt],
+        args: [owners, salt],
       });
 
       const txHash = await this.publicClient.sendRawTransaction({
-        serializedTransaction: calldata,
+        serializedTransaction: initCode,
       });
 
-      const receipt = await this.publicClient.waitForTransactionReceipt({
-        hash: txHash,
-      });
+      await this.publicClient.waitForTransactionReceipt({ hash: txHash });
 
-      const accountCreatedEvent = receipt.logs.find(
-        (log) =>
-          log.address.toLowerCase() === COINBASE_WALLET_FACTORY_ADDRESS.toLowerCase() &&
-          log.topics[0] === keccak256('AccountCreated(address,address,bytes32)' as `0x${string}`),
-      );
-      let deployedAddress;
-      if (accountCreatedEvent && accountCreatedEvent.topics[1]) {
-        // The deployed address is the second topic (index 1) in the AccountCreated event
-        deployedAddress = accountCreatedEvent.topics[1] as Address;
-      }
-      if (!deployedAddress) {
-        throw new Error('Failed to extract deployed address from transaction receipt');
-      }
-
-      return deployedAddress as Address;
+      return predictedAddress;
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new SDKError(`Failed to deploy smart account: ${error.message}`);

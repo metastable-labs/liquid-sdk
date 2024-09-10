@@ -1,32 +1,18 @@
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import {
-  PassKeyImplementation,
-  PublicKeyCredentialCreationOptions,
-  PublicKeyCredentialRequestOptions,
-} from '../types';
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
+  AuthenticationResponseJSON,
+} from '@simplewebauthn/types';
+import { PassKeyImplementation } from '../types';
 
-export const webPassKeys: PassKeyImplementation = {
-  createPassKeyCredential: async (options: any): Promise<Credential> => {
+export class WebPassKeys implements PassKeyImplementation {
+  async createPassKeyCredential(
+    options: PublicKeyCredentialCreationOptionsJSON,
+  ): Promise<RegistrationResponseJSON> {
     try {
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          ...options,
-          challenge: new Uint8Array(Buffer.from(options.challenge, 'base64')),
-          user: {
-            ...options.user,
-            id: new Uint8Array(Buffer.from(options.user.id, 'utf-8')),
-          },
-          pubKeyCredParams: options.pubKeyCredParams.map((param: any) => ({
-            ...param,
-            type: 'public-key' as const,
-          })),
-        },
-      });
-
-      if (credential instanceof PublicKeyCredential) {
-        return credential;
-      } else {
-        throw new Error('Failed to create PublicKeyCredential');
-      }
+      return await startRegistration(options);
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to create PassKey: ${error.message}`);
@@ -34,22 +20,13 @@ export const webPassKeys: PassKeyImplementation = {
         throw new Error('Failed to create PassKey: Unknown error');
       }
     }
-  },
+  }
 
-  signWithPassKey: async (options: PublicKeyCredentialRequestOptions): Promise<Credential> => {
+  async signWithPassKey(
+    options: PublicKeyCredentialRequestOptionsJSON,
+  ): Promise<AuthenticationResponseJSON> {
     try {
-      const credential = (await navigator.credentials.get({
-        publicKey: {
-          ...options,
-          challenge: new Uint8Array(Buffer.from(options.challenge, 'base64')),
-          allowCredentials: options.allowCredentials?.map((cred) => ({
-            ...cred,
-            id: new Uint8Array(Buffer.from(cred.id, 'base64')),
-            type: 'public-key' as const,
-          })),
-        },
-      })) as Credential;
-      return credential;
+      return await startAuthentication(options);
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to sign with PassKey: ${error.message}`);
@@ -57,5 +34,5 @@ export const webPassKeys: PassKeyImplementation = {
         throw new Error('Failed to sign with PassKey: Unknown error');
       }
     }
-  },
-};
+  }
+}
