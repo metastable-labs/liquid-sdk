@@ -7,15 +7,18 @@ PassKey authentication, based on the WebAuthn standard, is primarily a client-si
 ## Authentication Flow
 
 1. **Initiate Authentication (Server)**
+
    - The server generates a challenge (a random string).
    - The server sends this challenge to the client along with any other necessary authentication options.
 
 2. **Perform Authentication (Client/SDK)**
+
    - The SDK calls `signWithPassKey` with the challenge and options received from the server.
    - The user's device prompts for biometric verification (e.g., fingerprint, face ID).
    - Upon successful biometric verification, the device signs the challenge using the private key associated with the PassKey.
 
 3. **Send Authentication Result (Client to Server)**
+
    - The SDK sends the signed challenge (assertion) back to the server.
 
 4. **Verify Authentication (Server)**
@@ -37,11 +40,13 @@ class LiquidSDK {
     }
 
     const authOptions = {
-      challenge: Uint8Array.from(challenge, c => c.charCodeAt(0)),
-      allowCredentials: [{
-        id: Uint8Array.from(atob(credentialId), c => c.charCodeAt(0)),
-        type: 'public-key',
-      }],
+      challenge: Uint8Array.from(challenge, (c) => c.charCodeAt(0)),
+      allowCredentials: [
+        {
+          id: Uint8Array.from(atob(credentialId), (c) => c.charCodeAt(0)),
+          type: 'public-key',
+        },
+      ],
     };
 
     const assertion = await this.passKeyImpl.signWithPassKey(authOptions);
@@ -61,6 +66,7 @@ class LiquidSDK {
 The server's role in authentication is more limited but still important:
 
 1. **Generate and Send Challenge**
+
    ```typescript
    function generateAuthChallenge(username: string): string {
      const challenge = crypto.randomBytes(32).toString('base64');
@@ -70,17 +76,17 @@ The server's role in authentication is more limited but still important:
    ```
 
 2. **Verify Authentication Result**
+
    ```typescript
-   async function verifyAuthentication(username: string, authResult: AuthenticationResult): Promise<boolean> {
+   async function verifyAuthentication(
+     username: string,
+     authResult: AuthenticationResult,
+   ): Promise<boolean> {
      const user = await getUserByUsername(username);
      const challenge = await getStoredChallenge(username);
-     
+
      // Verify the authentication result using the stored public key
-     const verified = await verifyWebAuthnAssertion(
-       authResult,
-       user.publicKey,
-       challenge
-     );
+     const verified = await verifyWebAuthnAssertion(authResult, user.publicKey, challenge);
 
      return verified;
    }
@@ -89,6 +95,7 @@ The server's role in authentication is more limited but still important:
 ## Conclusion
 
 In the PassKey authentication process:
+
 - The SDK handles the core authentication logic on the client-side, including interacting with the user's device to sign the challenge.
 - The server's role is to initiate the process by providing a challenge and to verify the result using the stored public key.
 - This distribution of responsibilities ensures security (private keys never leave the user's device) while still allowing the server to control access to its resources.

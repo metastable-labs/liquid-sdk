@@ -1,13 +1,13 @@
-import { Passkey } from "react-native-passkey";
-import { PasskeyRegistrationResult } from "react-native-passkey/lib/typescript/Passkey";
+import { Passkey } from 'react-native-passkey';
+import { PasskeyRegistrationResult } from 'react-native-passkey/lib/typescript/Passkey';
 import {
   PassKeyImplementation,
   PublicKeyCredentialCreationOptions,
   PublicKeyCredentialRequestOptions,
-} from "../types";
+} from '../types';
 
 // Initialize Passkey with your domain and app name
-const passkey = new Passkey("liquidsdkapp.com", "Liquid SDK");
+const passkey = new Passkey('liquidsdkapp.com', 'Liquid SDK');
 
 export const nativePassKeys: PassKeyImplementation = {
   createPassKeyCredential: async (
@@ -17,8 +17,8 @@ export const nativePassKeys: PassKeyImplementation = {
       const challenge = options.challenge;
       const userId = options.user.id;
 
-      if (typeof challenge !== "string" || typeof userId !== "string") {
-        throw new Error("Invalid challenge or user ID format");
+      if (typeof challenge !== 'string' || typeof userId !== 'string') {
+        throw new Error('Invalid challenge or user ID format');
       }
 
       const result = await passkey.register(challenge, userId);
@@ -27,7 +27,7 @@ export const nativePassKeys: PassKeyImplementation = {
       if (error instanceof Error) {
         throw new Error(`Failed to create PassKey: ${error.message}`);
       } else {
-        throw new Error("Failed to create PassKey: Unknown error");
+        throw new Error('Failed to create PassKey: Unknown error');
       }
     }
   },
@@ -36,8 +36,8 @@ export const nativePassKeys: PassKeyImplementation = {
     try {
       const challenge = options.challenge;
 
-      if (typeof challenge !== "string") {
-        throw new Error("Invalid challenge format");
+      if (typeof challenge !== 'string') {
+        throw new Error('Invalid challenge format');
       }
 
       const result = await passkey.auth(challenge);
@@ -46,7 +46,7 @@ export const nativePassKeys: PassKeyImplementation = {
       if (error instanceof Error) {
         throw new Error(`Failed to sign with PassKey: ${error.message}`);
       } else {
-        throw new Error("Failed to sign with PassKey: Unknown error");
+        throw new Error('Failed to sign with PassKey: Unknown error');
       }
     }
   },

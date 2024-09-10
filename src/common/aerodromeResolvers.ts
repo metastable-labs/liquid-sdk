@@ -1,9 +1,9 @@
-import { Address, PublicClient } from "viem";
-import { PoolDetails } from "../types";
-import { AerodromeFactoryABI, AerodromePoolABI } from "../abis";
+import { Address, PublicClient } from 'viem';
+import { PoolDetails } from '../types';
+import { AerodromeFactoryABI, AerodromePoolABI } from '../abis';
 
-import { AERODROME_FACTORY_ADDRESS } from "./constants";
-import { AerodromeError } from "./errors";
+import { AERODROME_FACTORY_ADDRESS } from './constants';
+import { AerodromeError } from './errors';
 
 export class AerodromeResolver {
   constructor(private publicClient: PublicClient) {}
@@ -15,33 +15,32 @@ export class AerodromeResolver {
       const allPools = (await this.publicClient.readContract({
         address: AERODROME_FACTORY_ADDRESS,
         abi: AerodromeFactoryABI,
-        functionName: "allPools",
+        functionName: 'allPools',
       })) as Address[];
 
       for (const poolAddress of allPools) {
-        const [token0, token1, isStable] =
-          (await this.publicClient.readContract({
-            address: poolAddress,
-            abi: AerodromePoolABI,
-            functionName: "getPoolInfo",
-          })) as [Address, Address, boolean];
+        const [token0, token1, isStable] = (await this.publicClient.readContract({
+          address: poolAddress,
+          abi: AerodromePoolABI,
+          functionName: 'getPoolInfo',
+        })) as [Address, Address, boolean];
 
         const [userLpBalance, reserves, totalSupply] = await Promise.all([
           this.publicClient.readContract({
             address: poolAddress,
             abi: AerodromePoolABI,
-            functionName: "balanceOf",
+            functionName: 'balanceOf',
             args: [userAddress],
           }) as Promise<bigint>,
           this.publicClient.readContract({
             address: poolAddress,
             abi: AerodromePoolABI,
-            functionName: "getReserves",
+            functionName: 'getReserves',
           }) as Promise<[bigint, bigint]>,
           this.publicClient.readContract({
             address: poolAddress,
             abi: AerodromePoolABI,
-            functionName: "totalSupply",
+            functionName: 'totalSupply',
           }) as Promise<bigint>,
         ]);
 
@@ -64,7 +63,7 @@ export class AerodromeResolver {
       if (error instanceof Error) {
         throw new AerodromeError(`Failed to get user pools: ${error.message}`);
       } else {
-        throw new AerodromeError("Failed to get user pools: Unknown error");
+        throw new AerodromeError('Failed to get user pools: Unknown error');
       }
     }
   }

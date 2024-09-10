@@ -45,6 +45,7 @@ async createSmartAccount(username: string): Promise<{ address: Address; passKeyI
 ### Returns
 
 A Promise that resolves to an object containing:
+
 - `address`: The address of the newly created smart account.
 - `passKeyId`: The ID of the PassKey associated with this account.
 
@@ -94,7 +95,7 @@ const actions = [
     tokenIn: { address: '0x...', symbol: 'TOKEN_A', decimals: 18 },
     tokenOut: { address: '0x...', symbol: 'TOKEN_B', decimals: 18 },
     amountIn: 1000000000000000000n, // 1 TOKEN_A
-    isStable: true
+    isStable: true,
   },
   {
     type: 'DEPOSIT',
@@ -102,8 +103,8 @@ const actions = [
     tokenB: { address: '0x...', symbol: 'TOKEN_C', decimals: 18 },
     amountA: 500000000000000000n, // 0.5 TOKEN_B
     amountB: 1000000000000000000n, // 1 TOKEN_C
-    isStable: false
-  }
+    isStable: false,
+  },
 ];
 
 try {
@@ -205,5 +206,6 @@ try {
 ```
 
 ## Notes
-Note: The `passkeyId` is crucial for identifying which PassKey to use in future authentications. 
+
+Note: The `passkeyId` is crucial for identifying which PassKey to use in future authentications.
 It should be stored securely and associated with the user's account. It is not a public key or signature, but rather an identifier for the credential.

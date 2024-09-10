@@ -9,19 +9,19 @@ export async function createUserOperation(
   account: Address,
   to: Address,
   data: Hex,
-  signature: string
+  signature: string,
 ): Promise<UserOperation> {
   try {
-    const nonce = await publicClient.readContract({
+    const nonce = (await publicClient.readContract({
       address: account,
       abi: CoinbaseSmartWalletABI,
       functionName: 'getNonce',
-    }) as bigint;
+    })) as bigint;
 
     const callData = encodeFunctionData({
       abi: CoinbaseSmartWalletABI,
       functionName: 'execute',
-      args: [to, 0, data]
+      args: [to, 0, data],
     });
 
     const userOp: UserOperation = {
@@ -35,7 +35,7 @@ export async function createUserOperation(
       maxFeePerGas: 0n,
       maxPriorityFeePerGas: 0n,
       paymasterAndData: '0x',
-      signature: signature as `0x${string}`
+      signature: signature as `0x${string}`,
     };
 
     return userOp;
@@ -50,15 +50,19 @@ export async function createUserOperation(
 
 export async function estimateUserOperationGas(
   publicClient: PublicClient,
-  userOp: UserOperation
+  userOp: UserOperation,
 ): Promise<UserOperation> {
   try {
-    const estimation = await publicClient.readContract({
+    const estimation = (await publicClient.readContract({
       address: ENTRY_POINT_ADDRESS,
       abi: EntryPointABI,
       functionName: 'estimateUserOperationGas',
       args: [userOp, ENTRY_POINT_ADDRESS, parseEther('0')],
-    }) as { preVerificationGas: bigint; verificationGas: bigint; callGasLimit: bigint };
+    })) as {
+      preVerificationGas: bigint;
+      verificationGas: bigint;
+      callGasLimit: bigint;
+    };
 
     return {
       ...userOp,
@@ -77,10 +81,9 @@ export async function estimateUserOperationGas(
 
 export async function sendUserOperation(
   publicClient: PublicClient,
-  userOp: UserOperation
+  userOp: UserOperation,
 ): Promise<`0x${string}`> {
   try {
-  
     // Encode the entire function call
     const calldata = encodeFunctionData({
       abi: EntryPointABI,
