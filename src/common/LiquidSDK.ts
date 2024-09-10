@@ -18,9 +18,14 @@ import {
   PassKeyImplementation,
 } from '../types';
 import { createUserOperation, estimateUserOperationGas, sendUserOperation } from './userOperations';
-import { encodeDepositLiquidity, encodeRemoveLiquidity, encodeSwap } from './aerodromeConnector';
 import { AerodromeResolver } from './aerodromeResolvers';
-import { getTokenBalance, getTokenList } from './utils';
+import {
+  getTokenBalance,
+  getTokenList,
+  calculateMinAmount,
+  calculateDeadline,
+  formatAmount,
+} from './utils';
 import {
   SDKError,
   PassKeyError,
@@ -249,25 +254,56 @@ export class LiquidSDK {
   private encodeAction(action: Action): { target: Address; value: bigint; data: Hex } {
     let functionName: string;
     let args: any[];
+    const deadline = calculateDeadline();
 
     switch (action.type) {
       case ActionType.SWAP:
-        functionName = 'swap';
-        args = [action.tokenIn.address, action.tokenOut.address, action.amountIn, action.isStable];
+        const minReturnAmount = calculateMinAmount(action.amountIn.toString(), action.tokenOut);
+        functionName = 'swapExactTokensForTokens';
+        args = [
+          action.amountIn,
+          minReturnAmount,
+          [
+            {
+              from: action.tokenIn.address,
+              to: action.tokenOut.address,
+              stable: action.isStable,
+            },
+          ],
+          action.to,
+          deadline,
+        ];
         break;
       case ActionType.DEPOSIT:
-        functionName = 'depositLiquidity';
+        const amountAMin = calculateMinAmount(action.amountA.toString(), action.tokenA);
+        const amountBMin = calculateMinAmount(action.amountB.toString(), action.tokenB);
+        functionName = 'addLiquidity';
         args = [
           action.tokenA.address,
           action.tokenB.address,
+          action.isStable,
           action.amountA,
           action.amountB,
-          action.isStable,
+          amountAMin,
+          amountBMin,
+          action.to,
+          deadline,
         ];
         break;
       case ActionType.WITHDRAW:
+        const amountAMinWithdraw = calculateMinAmount(action.amountAMin.toString(), action.tokenA);
+        const amountBMinWithdraw = calculateMinAmount(action.amountBMin.toString(), action.tokenB);
         functionName = 'removeLiquidity';
-        args = [action.tokenA.address, action.tokenB.address, action.liquidity, action.isStable];
+        args = [
+          action.tokenA.address,
+          action.tokenB.address,
+          action.isStable,
+          action.liquidity,
+          amountAMinWithdraw,
+          amountBMinWithdraw,
+          action.to,
+          deadline,
+        ];
         break;
       default:
         throw new SDKError(`Unknown action type`);
