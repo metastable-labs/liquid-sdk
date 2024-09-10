@@ -31,19 +31,18 @@ export interface PoolDetails {
   reserveToken1: string;
   totalSupply: string;
 }
-
 export enum ActionType {
   SWAP = 'SWAP',
   DEPOSIT = 'DEPOSIT',
   WITHDRAW = 'WITHDRAW',
 }
-
 export interface SwapAction {
   type: ActionType.SWAP;
   tokenIn: TokenInfo;
   tokenOut: TokenInfo;
   amountIn: bigint;
   isStable: boolean;
+  to?: Address; // Optional, will use account address if not provided
 }
 
 export interface DepositAction {
@@ -53,6 +52,18 @@ export interface DepositAction {
   amountA: bigint;
   amountB: bigint;
   isStable: boolean;
+  to?: Address;
+}
+
+export interface WithdrawAction {
+  type: ActionType.WITHDRAW;
+  tokenA: TokenInfo;
+  tokenB: TokenInfo;
+  liquidity: bigint;
+  amountAMin: bigint;
+  amountBMin: bigint;
+  isStable: boolean;
+  to?: Address;
 }
 
 export interface WithdrawAction {
