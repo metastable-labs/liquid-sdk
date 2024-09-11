@@ -215,26 +215,30 @@ export class LiquidSDK {
       const salt = parseEther('1'); //TODO: will use a unique nonce here
       const owners = [publicKey];
 
-      const predictedAddress = (await this.publicClient.readContract({
-        address: COINBASE_WALLET_FACTORY_ADDRESS,
-        abi: CoinbaseSmartWalletFactoryABI,
-        functionName: 'getAddress',
-        args: [owners, salt],
-      })) as Address;
+      // Create UserOperation for account creation
+      let userOp = await createUserOperation(
+        this.publicClient,
+        '0x', // 0x because we're creating a new account
+        '0x', // The 'data' is not used for account creation
+        '', // Empty signature for account creation
+        owners,
+        salt,
+      );
 
-      const initCode = encodeFunctionData({
-        abi: CoinbaseSmartWalletFactoryABI,
-        functionName: 'createAccount',
-        args: [owners, salt],
-      });
+      // Estimate gas for UserOperation
+      userOp = await estimateUserOperationGas(this.publicClient, userOp);
 
-      const txHash = await this.publicClient.sendRawTransaction({
-        serializedTransaction: initCode,
-      });
+      // Send UserOperation to EntryPoint
+      const txHash = await sendUserOperation(this.publicClient, userOp);
 
-      await this.publicClient.waitForTransactionReceipt({ hash: txHash });
+      // Wait for the transaction to be mined and get the receipt
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash });
 
-      return predictedAddress;
+      // The new account address should be available in the transaction receipt
+      // check how factory emits events and update here
+      const newAccountAddress = receipt.logs[0].address;
+
+      return newAccountAddress as `0x${string}`;
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new SDKError(`Failed to deploy smart account: ${error.message}`);

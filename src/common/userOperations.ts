@@ -1,22 +1,47 @@
 import { Address, Hex, encodeFunctionData, PublicClient, parseEther } from 'viem';
 import { UserOperation } from '../types';
 import { UserOperationError } from './errors';
-import { CoinbaseSmartWalletABI, EntryPointABI } from '../abis';
-import { ENTRY_POINT_ADDRESS } from './constants';
+import { CoinbaseSmartWalletABI, CoinbaseSmartWalletFactoryABI, EntryPointABI } from '../abis';
+import { COINBASE_WALLET_FACTORY_ADDRESS, ENTRY_POINT_ADDRESS } from './constants';
 
 export async function createUserOperation(
   publicClient: PublicClient,
-  account: Address,
+  sender: Address,
   data: Hex,
   signature: string,
-  initCode?: Hex,
+  owners?: string[], // For account creation
+  salt?: bigint, // For account creation
 ): Promise<UserOperation> {
   try {
-    const nonce = (await publicClient.readContract({
-      address: account,
-      abi: CoinbaseSmartWalletABI,
-      functionName: 'getNonce',
-    })) as bigint;
+    let account: Address;
+    let nonce: bigint;
+    let initCode: Hex;
+    if (sender) {
+      // Existing account
+      account = sender;
+      nonce = (await publicClient.readContract({
+        address: account,
+        abi: CoinbaseSmartWalletABI,
+        functionName: 'nonce',
+      })) as bigint;
+      initCode = '0x';
+    } else if (owners && salt !== undefined) {
+      // New account creation
+      account = (await publicClient.readContract({
+        address: COINBASE_WALLET_FACTORY_ADDRESS,
+        abi: CoinbaseSmartWalletFactoryABI,
+        functionName: 'getAddress',
+        args: [owners, salt],
+      })) as Address;
+      nonce = 0n;
+      initCode = encodeFunctionData({
+        abi: CoinbaseSmartWalletFactoryABI,
+        functionName: 'createAccount',
+        args: [owners, salt],
+      }) as Hex;
+    } else {
+      throw new Error('Invalid parameters for user operation creation');
+    }
 
     const userOp: UserOperation = {
       sender: account,
