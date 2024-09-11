@@ -12,6 +12,7 @@ import { base } from 'viem/chains';
 import {
   TokenInfo,
   UserOperation,
+  PasskeyRegistrationResult,
   PoolDetails,
   Action,
   ActionType,
@@ -169,7 +170,26 @@ export class LiquidSDK {
       }
     }
   }
+  // backend implementation to return
+  private async verifyRegistration(result: PasskeyRegistrationResult): Promise<any> {
+    return result;
+  }
 
+  // backend implemntation
+  private async getAuthenticationOptions(
+    passKeyId: string,
+  ): Promise<PublicKeyCredentialRequestOptions> {
+    return {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [
+        {
+          id: Uint8Array.from(Buffer.from(passKeyId, 'base64')),
+          type: 'public-key',
+        },
+      ],
+      timeout: 60000,
+    };
+  }
   // ideally this should be from the backend
   private async getRegistrationOptions(
     username: string,
@@ -223,21 +243,6 @@ export class LiquidSDK {
         throw new SDKError('Failed to deploy smart account: Unknown error');
       }
     }
-  }
-
-  private async getAuthenticationOptions(
-    passKeyId: string,
-  ): Promise<PublicKeyCredentialRequestOptions> {
-    return {
-      challenge: crypto.getRandomValues(new Uint8Array(32)),
-      allowCredentials: [
-        {
-          id: Uint8Array.from(Buffer.from(passKeyId, 'base64')),
-          type: 'public-key',
-        },
-      ],
-      timeout: 60000,
-    };
   }
 
   private encodeAction(action: Action): { target: Address; value: bigint; data: Hex } {
