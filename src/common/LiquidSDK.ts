@@ -76,7 +76,7 @@ export class LiquidSDK {
       });
 
       const authOptions = await this.getAuthenticationOptions(passKeyId);
-      const signature = await this.passKeyImpl.signWithPassKey(authOptions as any);
+      const signature = await this.passKeyImpl.signWithPassKey(authOptions);
 
       let signatureData: string;
       if ('signature' in signature) {
@@ -89,7 +89,6 @@ export class LiquidSDK {
 
       let userOp = await createUserOperation(
         this.publicClient,
-        account,
         account,
         batchCalldata,
         signatureData,

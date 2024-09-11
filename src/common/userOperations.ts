@@ -7,9 +7,9 @@ import { ENTRY_POINT_ADDRESS } from './constants';
 export async function createUserOperation(
   publicClient: PublicClient,
   account: Address,
-  to: Address,
   data: Hex,
   signature: string,
+  initCode?: Hex,
 ): Promise<UserOperation> {
   try {
     const nonce = (await publicClient.readContract({
@@ -18,17 +18,11 @@ export async function createUserOperation(
       functionName: 'getNonce',
     })) as bigint;
 
-    const callData = encodeFunctionData({
-      abi: CoinbaseSmartWalletABI,
-      functionName: 'execute',
-      args: [to, 0, data],
-    });
-
     const userOp: UserOperation = {
       sender: account,
       nonce,
-      initCode: '0x',
-      callData,
+      initCode: initCode || '0x',
+      callData: data,
       callGasLimit: 0n,
       verificationGasLimit: 0n,
       preVerificationGas: 0n,

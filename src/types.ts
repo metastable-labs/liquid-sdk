@@ -1,5 +1,8 @@
 import { Address } from 'viem';
-import { PasskeyRegistrationResult as NativePasskeyRegistrationResult } from 'react-native-passkey/lib/typescript/Passkey';
+import {
+  PasskeyRegistrationResult as NativePasskeyRegistrationResult,
+  PasskeyAuthResult as NativePasskeyAuthResult,
+} from 'react-native-passkey/lib/typescript/Passkey';
 import { RegistrationResponseJSON, AuthenticationResponseJSON } from '@simplewebauthn/types';
 
 export interface TokenInfo {
@@ -104,9 +107,9 @@ export interface PublicKeyCredentialRequestOptions {
 }
 
 export type PasskeyRegistrationResult = RegistrationResponseJSON | NativePasskeyRegistrationResult;
-export type PasskeyAuthResult = AuthenticationResponseJSON;
+export type PasskeyAuthResult = AuthenticationResponseJSON | NativePasskeyAuthResult;
 
 export interface PassKeyImplementation {
   createPassKeyCredential: (options: any) => Promise<PasskeyRegistrationResult>;
-  signWithPassKey: (options: any) => Promise<PasskeyAuthResult | any>;
+  signWithPassKey: (options: any) => Promise<PasskeyAuthResult>;
 }
