@@ -90,6 +90,12 @@ A Promise that resolves to the transaction hash of the executed strategy.
 
 ```typescript
 const actions = [
+      {
+    type: 'APPROVE',
+    token: '0x...',
+    spender: '0x...',
+    amount: 1000000000000000000n, // 1 TOKEN
+  },
   {
     type: 'SWAP',
     tokenIn: { address: '0x...', symbol: 'TOKEN_A', decimals: 18 },
@@ -202,6 +208,53 @@ try {
   console.log('Supported tokens:', tokens);
 } catch (error) {
   console.error('Failed to get token list:', error);
+}
+```
+
+## getQuote
+
+Gets a quote for adding or removing liquidity.
+
+```typescript
+async getQuote(
+  tokenA: TokenInfo,
+  tokenB: TokenInfo,
+  isDeposit: boolean,
+  amount: string,
+  isStable: boolean,
+): Promise
+```
+
+### Parameters
+
+- `tokenA`: Information about the first token in the pair.
+- `tokenB`: Information about the second token in the pair.
+- `isDeposit`: Whether this is a deposit (true) or withdrawal (false).
+- `amount`: The amount of tokenA (for deposit) or LP tokens (for withdrawal).
+- `isStable`: Whether this is a stable or volatile pool.
+
+### Returns
+
+A Promise that resolves to an object containing the amounts and liquidity.
+
+### Errors
+
+- Throws `AerodromeError` if fetching the quote fails.
+
+### Usage Example
+
+```typescript
+try {
+  const quote = await sdk.getQuote(
+    { address: '0x...', symbol: 'TOKEN_A', decimals: 18 },
+    { address: '0x...', symbol: 'TOKEN_B', decimals: 18 },
+    true,
+    '1000000000000000000', // 1 TOKEN_A
+    true
+  );
+  console.log('Quote:', quote);
+} catch (error) {
+  console.error('Failed to get quote:', error);
 }
 ```
 
