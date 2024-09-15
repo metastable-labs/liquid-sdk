@@ -40,6 +40,7 @@ export enum ActionType {
   DEPOSIT = 'DEPOSIT',
   WITHDRAW = 'WITHDRAW',
   APPROVE = 'APPROVE',
+  WRAP = 'WRAP',
 }
 export interface SwapAction {
   type: ActionType.SWAP;
@@ -86,7 +87,12 @@ export interface WithdrawAction {
   isStable: boolean;
 }
 
-export type Action = SwapAction | DepositAction | WithdrawAction | ApproveAction;
+export interface WrapETHAction {
+  type: ActionType.WRAP;
+  amount: bigint;
+}
+
+export type Action = SwapAction | DepositAction | WithdrawAction | ApproveAction | WrapETHAction;
 
 export interface PublicKeyCredentialCreationOptions {
   challenge: string;

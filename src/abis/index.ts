@@ -7,6 +7,7 @@ import CoinbaseSmartWalletABI from './CoinbaseSmartWalletABI.json';
 import CoinbaseSmartWalletFactoryABI from './CoinbaseSmartWalletFactoryABI.json';
 import EntryPointABI from './EntryPointABI.json';
 import AerodromeRouterABI from './AerodromeRouterABI.json';
+import WrappedETHABI from './WrappedETHABI.json';
 
 export {
   AerodromePoolABI,
@@ -17,4 +18,5 @@ export {
   CoinbaseSmartWalletFactoryABI,
   EntryPointABI,
   AerodromeRouterABI,
+  WrappedETHABI,
 };

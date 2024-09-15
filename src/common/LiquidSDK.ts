@@ -38,8 +38,9 @@ import {
   AERODROME_CONNECTOR_ADDRESS,
   IS_BROWSER,
   IS_REACT_NATIVE,
+  WETH_ADDRESS,
 } from './constants';
-import { CoinbaseSmartWalletABI, AerodromeConnectorABI } from '../abis';
+import { CoinbaseSmartWalletABI, AerodromeConnectorABI, WrappedETHABI } from '../abis';
 
 export class LiquidSDK {
   private publicClient: PublicClient;
@@ -314,11 +315,19 @@ export class LiquidSDK {
   private encodeAction(action: Action): { target: Address; value: bigint; data: Hex } {
     let target: Address;
     let functionName: string;
+    let value: bigint = 0n;
     let args: any[];
     let abi: any;
     const deadline = calculateDeadline();
 
     switch (action.type) {
+      case ActionType.WRAP:
+        target = WETH_ADDRESS;
+        abi = WrappedETHABI;
+        functionName = 'deposit';
+        args = [];
+        value = action.amount;
+        break;
       case ActionType.APPROVE:
         target = action.token!;
         abi = erc20Abi;
@@ -388,8 +397,8 @@ export class LiquidSDK {
       functionName,
       args,
     });
-    // If the action is not an approval, wrap it in a call to the connector's execute function
-    if (action.type !== ActionType.APPROVE) {
+    // If the action is not an approval or wrap, wrap it in a call to the connector's execute function
+    if (action.type !== ActionType.APPROVE && action.type !== ActionType.WRAP) {
       return {
         target: CONNECTOR_PLUGIN_ADDRESS,
         value: 0n,
@@ -414,7 +423,7 @@ export class LiquidSDK {
     // For approvals, return the encoded data directly
     return {
       target,
-      value: 0n,
+      value,
       data,
     };
   }

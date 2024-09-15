@@ -11,6 +11,7 @@ export const AERODROME_FACTORY_ADDRESS: Address =
   '0x420DD381b31aEf6683db6B902084cB0FFECe40Da' as Address;
 export const AERODROME_ROUTER_ADDRESS: Address =
   '0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43' as Address;
+export const WETH_ADDRESS: Address = '0x4200000000000000000000000000000000000006' as Address;
 
 export const EVENT_ACCOUNT_CREATED = 'AccountCreated';
 export const EVENT_LIQUIDITY_ADDED = 'LiquidityAdded';
