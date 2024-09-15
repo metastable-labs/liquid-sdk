@@ -6,12 +6,10 @@ import {
   encodeFunctionData,
   PublicClient,
   parseEther,
-  keccak256,
 } from 'viem';
 import { base } from 'viem/chains';
 import {
   TokenInfo,
-  UserOperation,
   PasskeyRegistrationResult,
   PoolDetails,
   Action,
@@ -35,19 +33,12 @@ import {
   UnsupportedEnvironmentError,
 } from './errors';
 import {
-  COINBASE_WALLET_FACTORY_ADDRESS,
-  ENTRY_POINT_ADDRESS,
   CONNECTOR_PLUGIN_ADDRESS,
   AERODROME_CONNECTOR_ADDRESS,
   IS_BROWSER,
   IS_REACT_NATIVE,
 } from './constants';
-import {
-  CoinbaseSmartWalletABI,
-  AerodromeFactoryABI,
-  CoinbaseSmartWalletFactoryABI,
-  AerodromeConnectorABI,
-} from '../abis';
+import { CoinbaseSmartWalletABI, AerodromeConnectorABI } from '../abis';
 
 export class LiquidSDK {
   private publicClient: PublicClient;
