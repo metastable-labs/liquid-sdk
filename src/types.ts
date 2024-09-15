@@ -39,6 +39,7 @@ export enum ActionType {
   SWAP = 'SWAP',
   DEPOSIT = 'DEPOSIT',
   WITHDRAW = 'WITHDRAW',
+  APPROVE = 'APPROVE',
 }
 export interface SwapAction {
   type: ActionType.SWAP;
@@ -47,6 +48,13 @@ export interface SwapAction {
   amountIn: bigint;
   isStable: boolean;
   to?: Address; // Optional, will use account address if not provided
+}
+
+export interface ApproveAction {
+  type: ActionType.APPROVE;
+  token?: Address;
+  spender?: Address;
+  amount?: bigint;
 }
 
 export interface DepositAction {
@@ -78,7 +86,7 @@ export interface WithdrawAction {
   isStable: boolean;
 }
 
-export type Action = SwapAction | DepositAction | WithdrawAction;
+export type Action = SwapAction | DepositAction | WithdrawAction | ApproveAction;
 
 export interface PublicKeyCredentialCreationOptions {
   challenge: string;

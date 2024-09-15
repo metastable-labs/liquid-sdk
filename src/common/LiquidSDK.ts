@@ -6,6 +6,7 @@ import {
   encodeFunctionData,
   PublicClient,
   parseEther,
+  erc20Abi,
 } from 'viem';
 import { base } from 'viem/chains';
 import {
@@ -311,14 +312,24 @@ export class LiquidSDK {
    * @throws {SDKError} If the action type is unknown
    */
   private encodeAction(action: Action): { target: Address; value: bigint; data: Hex } {
+    let target: Address;
     let functionName: string;
     let args: any[];
+    let abi: any;
     const deadline = calculateDeadline();
 
     switch (action.type) {
+      case ActionType.APPROVE:
+        target = action.token!;
+        abi = erc20Abi;
+        functionName = 'approve';
+        args = [action.spender, action.amount];
+        break;
       case ActionType.SWAP:
+        target = CONNECTOR_PLUGIN_ADDRESS;
         const minReturnAmount = calculateMinAmount(action.amountIn.toString(), action.tokenOut);
         functionName = 'swapExactTokensForTokens';
+        abi = AerodromeConnectorABI;
         args = [
           action.amountIn,
           minReturnAmount,
@@ -334,9 +345,11 @@ export class LiquidSDK {
         ];
         break;
       case ActionType.DEPOSIT:
+        target = CONNECTOR_PLUGIN_ADDRESS;
         const amountAMin = calculateMinAmount(action.amountA.toString(), action.tokenA);
         const amountBMin = calculateMinAmount(action.amountB.toString(), action.tokenB);
         functionName = 'addLiquidity';
+        abi = AerodromeConnectorABI;
         args = [
           action.tokenA.address,
           action.tokenB.address,
@@ -350,9 +363,11 @@ export class LiquidSDK {
         ];
         break;
       case ActionType.WITHDRAW:
+        target = CONNECTOR_PLUGIN_ADDRESS;
         const amountAMinWithdraw = calculateMinAmount(action.amountAMin.toString(), action.tokenA);
         const amountBMinWithdraw = calculateMinAmount(action.amountBMin.toString(), action.tokenB);
         functionName = 'removeLiquidity';
+        abi = AerodromeConnectorABI;
         args = [
           action.tokenA.address,
           action.tokenB.address,
@@ -369,29 +384,38 @@ export class LiquidSDK {
     }
 
     const data = encodeFunctionData({
-      abi: AerodromeConnectorABI,
+      abi,
       functionName,
       args,
     });
+    // If the action is not an approval, wrap it in a call to the connector's execute function
+    if (action.type !== ActionType.APPROVE) {
+      return {
+        target: CONNECTOR_PLUGIN_ADDRESS,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: [
+            {
+              type: 'function',
+              name: 'execute',
+              inputs: [
+                { type: 'address', name: 'connector' },
+                { type: 'bytes', name: 'data' },
+              ],
+              outputs: [{ type: 'bytes' }],
+            },
+          ],
+          functionName: 'execute',
+          args: [AERODROME_CONNECTOR_ADDRESS, data],
+        }),
+      };
+    }
 
+    // For approvals, return the encoded data directly
     return {
-      target: CONNECTOR_PLUGIN_ADDRESS,
+      target,
       value: 0n,
-      data: encodeFunctionData({
-        abi: [
-          {
-            type: 'function',
-            name: 'execute',
-            inputs: [
-              { type: 'address', name: 'connector' },
-              { type: 'bytes', name: 'data' },
-            ],
-            outputs: [{ type: 'bytes' }],
-          },
-        ],
-        functionName: 'execute',
-        args: [AERODROME_CONNECTOR_ADDRESS, data],
-      }),
+      data,
     };
   }
 }
