@@ -1,8 +1,8 @@
-import { Address, PublicClient } from 'viem';
-import { PoolDetails } from '../types';
-import { AerodromeFactoryABI, AerodromePoolABI } from '../abis';
+import { Address, formatUnits, parseUnits, PublicClient } from 'viem';
+import { PoolDetails, TokenInfo } from '../types';
+import { AerodromeFactoryABI, AerodromePoolABI, AerodromeRouterABI } from '../abis';
 
-import { AERODROME_FACTORY_ADDRESS } from './constants';
+import { AERODROME_FACTORY_ADDRESS, AERODROME_ROUTER_ADDRESS } from './constants';
 import { AerodromeError } from './errors';
 
 export class AerodromeResolver {
@@ -64,6 +64,97 @@ export class AerodromeResolver {
         throw new AerodromeError(`Failed to get user pools: ${error.message}`);
       } else {
         throw new AerodromeError('Failed to get user pools: Unknown error');
+      }
+    }
+  }
+
+  async getAddLiquidityQuote(
+    tokenA: TokenInfo,
+    tokenB: TokenInfo,
+    amountADesired: string,
+    isStable: boolean,
+  ): Promise<{ amountA: string; amountB: string; liquidity: string }> {
+    try {
+      const amountADesiredBigInt = parseUnits(amountADesired, tokenA.decimals);
+
+      // Use getAmountsOut to get the market rate for tokenB
+      const amountsBigInt = (await this.publicClient.readContract({
+        address: AERODROME_ROUTER_ADDRESS,
+        abi: AerodromeRouterABI,
+        functionName: 'getAmountsOut',
+        args: [
+          amountADesiredBigInt,
+          [
+            {
+              from: tokenA.address,
+              to: tokenB.address,
+              stable: isStable,
+              factory: '0x0000000000000000000000000000000000000000', // Use zero address for factory to use the default factory
+            },
+          ],
+        ],
+      })) as bigint[];
+
+      const amountBOptimal = amountsBigInt[1];
+
+      // Now, get the final quote with the optimal amounts
+      const [amountA, amountB, liquidity] = (await this.publicClient.readContract({
+        address: AERODROME_ROUTER_ADDRESS,
+        abi: AerodromeRouterABI,
+        functionName: 'quoteAddLiquidity',
+        args: [
+          tokenA.address,
+          tokenB.address,
+          isStable,
+          '0x0000000000000000000000000000000000000000', // Use zero address for factory to use the default factory
+          amountADesiredBigInt,
+          amountBOptimal,
+        ],
+      })) as [bigint, bigint, bigint];
+
+      return {
+        amountA: formatUnits(amountA, tokenA.decimals),
+        amountB: formatUnits(amountB, tokenB.decimals),
+        liquidity: liquidity.toString(),
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new AerodromeError(`Failed to get add liquidity quote: ${error.message}`);
+      } else {
+        throw new AerodromeError('Failed to get add liquidity quote: Unknown error');
+      }
+    }
+  }
+
+  async getRemoveLiquidityQuote(
+    tokenA: TokenInfo,
+    tokenB: TokenInfo,
+    liquidity: string,
+    isStable: boolean,
+  ): Promise<{ amountA: string; amountB: string }> {
+    try {
+      const [amountA, amountB] = (await this.publicClient.readContract({
+        address: AERODROME_ROUTER_ADDRESS,
+        abi: AerodromeRouterABI,
+        functionName: 'quoteRemoveLiquidity',
+        args: [
+          tokenA.address,
+          tokenB.address,
+          isStable,
+          '0x0000000000000000000000000000000000000000', // Use zero address for factory to use the default factory
+          BigInt(liquidity),
+        ],
+      })) as [bigint, bigint];
+
+      return {
+        amountA: formatUnits(amountA, tokenA.decimals),
+        amountB: formatUnits(amountB, tokenB.decimals),
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new AerodromeError(`Failed to get remove liquidity quote: ${error.message}`);
+      } else {
+        throw new AerodromeError('Failed to get remove liquidity quote: Unknown error');
       }
     }
   }

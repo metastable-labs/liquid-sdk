@@ -169,6 +169,33 @@ export class LiquidSDK {
       }
     }
   }
+
+  async getQuote(
+    tokenA: TokenInfo,
+    tokenB: TokenInfo,
+    isDeposit: boolean,
+    amount: string,
+    isStable: boolean,
+  ): Promise<{ amountA: string; amountB: string; liquidity?: string }> {
+    try {
+      if (isDeposit) {
+        return await this.aerodromeResolver.getAddLiquidityQuote(tokenA, tokenB, amount, isStable);
+      } else {
+        return await this.aerodromeResolver.getRemoveLiquidityQuote(
+          tokenA,
+          tokenB,
+          amount,
+          isStable,
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new AerodromeError(`Failed to get quote: ${error.message}`);
+      } else {
+        throw new AerodromeError('Failed to get quote: Unknown error');
+      }
+    }
+  }
   // backend implementation to return
   private async verifyRegistration(result: PasskeyRegistrationResult): Promise<any> {
     return result;
@@ -234,11 +261,7 @@ export class LiquidSDK {
       // Wait for the transaction to be mined and get the receipt
       const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash });
 
-      // The new account address should be available in the transaction receipt
-      // check how factory emits events and update here
-      const newAccountAddress = receipt.logs[0].address;
-
-      return newAccountAddress as `0x${string}`;
+      return userOp.sender as `0x${string}`;
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new SDKError(`Failed to deploy smart account: ${error.message}`);

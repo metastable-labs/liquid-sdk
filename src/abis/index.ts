@@ -6,6 +6,7 @@ import ConnectorPluginABI from './ConnectorPluginABI.json';
 import CoinbaseSmartWalletABI from './CoinbaseSmartWalletABI.json';
 import CoinbaseSmartWalletFactoryABI from './CoinbaseSmartWalletFactoryABI.json';
 import EntryPointABI from './EntryPointABI.json';
+import AerodromeRouterABI from './AerodromeRouterABI.json';
 
 export {
   AerodromePoolABI,
@@ -15,4 +16,5 @@ export {
   CoinbaseSmartWalletABI,
   CoinbaseSmartWalletFactoryABI,
   EntryPointABI,
+  AerodromeRouterABI,
 };

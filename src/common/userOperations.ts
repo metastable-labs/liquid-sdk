@@ -16,7 +16,7 @@ export async function createUserOperation(
     let account: Address;
     let nonce: bigint;
     let initCode: Hex;
-    if (sender) {
+    if (sender !== '0x') {
       // Existing account
       account = sender;
       nonce = (await publicClient.readContract({

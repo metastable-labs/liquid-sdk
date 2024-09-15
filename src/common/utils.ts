@@ -33,7 +33,7 @@ export async function getTokenList(): Promise<TokenInfo[]> {
  */
 export function calculateMinAmount(amount: string, tokenInfo: TokenInfo): bigint {
   const parsedAmount = parseUnits(amount, tokenInfo.decimals);
-  const slippageFactor = 10000n - BigInt(0.2 * 100);
+  const slippageFactor = 10000n - BigInt(1 * 100);
   const minAmount = (parsedAmount * slippageFactor) / 10000n;
   return minAmount;
 }
