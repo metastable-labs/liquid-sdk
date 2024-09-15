@@ -54,6 +54,12 @@ export class LiquidSDK {
   private aerodromeResolver: AerodromeResolver;
   private passKeyImpl: PassKeyImplementation;
 
+  /**
+   * @notice Constructs a new instance of the LiquidSDK
+   * @param rpcUrl The URL of the RPC endpoint to connect to
+   * @param passKeyImpl The implementation of PassKey functionality
+   * @throws {UnsupportedEnvironmentError} If the environment is not supported
+   */
   constructor(rpcUrl: string, passKeyImpl: PassKeyImplementation) {
     if (!IS_BROWSER && !IS_REACT_NATIVE) {
       throw new UnsupportedEnvironmentError('LiquidSDK');
@@ -65,6 +71,15 @@ export class LiquidSDK {
     this.aerodromeResolver = new AerodromeResolver(this.publicClient);
     this.passKeyImpl = passKeyImpl;
   }
+
+  /**
+   * @notice Executes a strategy consisting of multiple actions
+   * @param account The address of the account executing the strategy
+   * @param passKeyId The ID of the PassKey to use for signing
+   * @param actions An array of actions to execute
+   * @returns A promise that resolves to the transaction hash
+   * @throws {UserOperationError} If the strategy execution fails
+   */
   async executeStrategy(account: Address, passKeyId: string, actions: Action[]): Promise<string> {
     try {
       const calls = actions.map((action) => this.encodeAction(action));
@@ -105,7 +120,12 @@ export class LiquidSDK {
       }
     }
   }
-
+  /**
+   * @notice Creates a new smart account
+   * @param username The username associated with the new account
+   * @returns A promise that resolves to an object containing the address of the new account
+   * @throws {PassKeyError} If the smart account creation fails
+   */
   async createSmartAccount(username: string): Promise<{ address: Address }> {
     try {
       // Fetch registration options from the backend
@@ -146,6 +166,13 @@ export class LiquidSDK {
     }
   }
 
+  /**
+   * @notice Retrieves the balance of a specific token for a user
+   * @param tokenAddress The address of the token
+   * @param userAddress The address of the user
+   * @returns A promise that resolves to the token balance as a string
+   * @throws {SDKError} If fetching the token balance fails
+   */
   async getTokenBalance(tokenAddress: Address, userAddress: Address): Promise<string> {
     try {
       return await getTokenBalance(this.publicClient, tokenAddress, userAddress);
@@ -170,6 +197,16 @@ export class LiquidSDK {
     }
   }
 
+  /**
+   * @notice Gets a quote for adding or removing liquidity
+   * @param tokenA The first token in the pair
+   * @param tokenB The second token in the pair
+   * @param isDeposit Whether this is a deposit (true) or withdrawal (false)
+   * @param amount The amount of tokenA (for deposit) or LP tokens (for withdrawal)
+   * @param isStable Whether this is a stable or volatile pool
+   * @returns A promise that resolves to an object containing the amounts and liquidity
+   * @throws {AerodromeError} If fetching the quote fails
+   */
   async getQuote(
     tokenA: TokenInfo,
     tokenB: TokenInfo,
@@ -236,7 +273,12 @@ export class LiquidSDK {
       attestation: 'direct' as const,
     };
   }
-
+  /**
+   * @notice Deploys a new smart account
+   * @param publicKey The public key of the PassKey
+   * @returns A promise that resolves to the address of the new smart account
+   * @throws {SDKError} If the smart account deployment fails
+   */
   private async deploySmartAccount(publicKey: string): Promise<Address> {
     try {
       const salt = parseEther('1'); //TODO: will use a unique nonce here
@@ -271,6 +313,12 @@ export class LiquidSDK {
     }
   }
 
+  /**
+   * @notice Encodes an action for execution
+   * @param action The action to encode
+   * @returns An object containing the target address, value, and encoded data
+   * @throws {SDKError} If the action type is unknown
+   */
   private encodeAction(action: Action): { target: Address; value: bigint; data: Hex } {
     let functionName: string;
     let args: any[];
