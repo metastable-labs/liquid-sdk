@@ -1,46 +1,45 @@
 import {
-  createPublicClient,
-  http,
   Address,
   Hex,
-  encodeFunctionData,
   PublicClient,
-  parseEther,
+  createPublicClient,
+  encodeFunctionData,
   erc20Abi,
+  http,
+  parseEther,
 } from 'viem';
 import { base } from 'viem/chains';
+import { AerodromeConnectorABI, WrappedETHABI } from '../abis';
 import {
-  TokenInfo,
-  PasskeyRegistrationResult,
-  PoolDetails,
   Action,
   ActionType,
   PassKeyImplementation,
+  PasskeyRegistrationResult,
+  PoolDetails,
+  TokenInfo,
 } from '../types';
-import { createUserOperation, estimateUserOperationGas, sendUserOperation } from './userOperations';
 import { AerodromeResolver } from './aerodromeResolvers';
 import {
-  getTokenBalance,
-  getTokenList,
-  calculateMinAmount,
-  calculateDeadline,
-  formatAmount,
-} from './utils';
-import {
-  SDKError,
-  PassKeyError,
-  UserOperationError,
-  AerodromeError,
-  UnsupportedEnvironmentError,
-} from './errors';
-import {
-  CONNECTOR_PLUGIN_ADDRESS,
   AERODROME_CONNECTOR_ADDRESS,
+  CONNECTOR_PLUGIN_ADDRESS,
   IS_BROWSER,
   IS_REACT_NATIVE,
   WETH_ADDRESS,
 } from './constants';
-import { CoinbaseSmartWalletABI, AerodromeConnectorABI, WrappedETHABI } from '../abis';
+import {
+  AerodromeError,
+  PassKeyError,
+  SDKError,
+  UnsupportedEnvironmentError,
+  UserOperationError,
+} from './errors';
+import { createUserOperation, estimateUserOperationGas, sendUserOperation } from './userOperations';
+import {
+  calculateDeadline,
+  calculateMinAmount,
+  getTokenBalance,
+  getTokenList
+} from './utils';
 
 export class LiquidSDK {
   private publicClient: PublicClient;
@@ -74,44 +73,46 @@ export class LiquidSDK {
    * @throws {UserOperationError} If the strategy execution fails
    */
   async executeStrategy(account: Address, passKeyId: string, actions: Action[]): Promise<string> {
-    try {
-      const calls = actions.map((action) => this.encodeAction(action));
+    // try {
+    //   const calls = actions.map((action) => this.encodeAction(action));
 
-      const batchCalldata = encodeFunctionData({
-        abi: CoinbaseSmartWalletABI,
-        functionName: 'executeBatch',
-        args: [calls],
-      });
+    //   const batchCalldata = encodeFunctionData({
+    //     abi: CoinbaseSmartWalletABI,
+    //     functionName: 'executeBatch',
+    //     args: [calls],
+    //   });
 
-      const authOptions = await this.getAuthenticationOptions(passKeyId);
-      const signature = await this.passKeyImpl.signWithPassKey(authOptions);
+    //   const authOptions = await this.getAuthenticationOptions(passKeyId);
+    //   const signature = await this.passKeyImpl.signWithPassKey(authOptions);
 
-      let signatureData: string;
-      if ('signature' in signature) {
-        // Native signature
-        signatureData = signature.signature;
-      } else {
-        // Web signature
-        signatureData = signature.response.signature;
-      }
+    //   let signatureData: string;
+    //   if ('signature' in signature) {
+    //     // Native signature
+    //     signatureData = signature.signature;
+    //   } else {
+    //     // Web signature
+    //     signatureData = signature.response.signature;
+    //   }
 
-      let userOp = await createUserOperation(
-        this.publicClient,
-        account,
-        batchCalldata,
-        signatureData,
-      );
-      userOp = await estimateUserOperationGas(this.publicClient, userOp);
-      const txHash = await sendUserOperation(this.publicClient, userOp);
+    //   let userOp = await createUserOperation(
+    //     this.publicClient,
+    //     account,
+    //     batchCalldata,
+    //     signatureData,
+    //   );
+    //   userOp = await estimateUserOperationGas(this.publicClient, userOp);
+    //   const txHash = await sendUserOperation(this.publicClient, userOp);
 
-      return txHash;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        throw new UserOperationError(`Failed to execute strategy: ${error.message}`);
-      } else {
-        throw new UserOperationError('Failed to execute strategy: Unknown error');
-      }
-    }
+    //   return txHash;
+    // } catch (error: unknown) {
+    //   if (error instanceof Error) {
+    //     throw new UserOperationError(`Failed to execute strategy: ${error.message}`);
+    //   } else {
+    //     throw new UserOperationError('Failed to execute strategy: Unknown error');
+    //   }
+    // }
+
+    return ""
   }
   /**
    * @notice Creates a new smart account
@@ -120,30 +121,33 @@ export class LiquidSDK {
    * @throws {PassKeyError} If the smart account creation fails
    */
   async createSmartAccount(username: string): Promise<{ address: Address }> {
-    try {
-      // Fetch registration options from the backend
-      const options = await this.getRegistrationOptions(username);
+    // try {
+    //   // Fetch registration options from the backend
+    //   const options = await this.getRegistrationOptions(username);
 
-      const passKeyCreationResponse = await this.passKeyImpl.createPassKeyCredential(options);
+    //   const passKeyCreationResponse = await this.passKeyImpl.createPassKeyCredential(options);
 
-      // Send attestation data to backend for verification
-      const verificationResponse = await this.verifyRegistration(passKeyCreationResponse);
+    //   // Send attestation data to backend for verification
+    //   const verificationResponse = await this.verifyRegistration(passKeyCreationResponse);
 
-      if (!verificationResponse.verified) {
-        throw new Error('Attestation verification failed');
-      }
+    //   if (!verificationResponse.verified) {
+    //     throw new Error('Attestation verification failed');
+    //   }
 
-      const address = await this.deploySmartAccount(verificationResponse.publicKey);
+    //   const address = await this.deploySmartAccount(verificationResponse.publicKey);
 
-      return {
-        address,
-      };
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        throw new PassKeyError(`Failed to create smart account: ${error.message}`);
-      } else {
-        throw new PassKeyError('Failed to create smart account: Unknown error');
-      }
+    //   return {
+    //     address,
+    //   };
+    // } catch (error: unknown) {
+    //   if (error instanceof Error) {
+    //     throw new PassKeyError(`Failed to create smart account: ${error.message}`);
+    //   } else {
+    //     throw new PassKeyError('Failed to create smart account: Unknown error');
+    //   }
+    // }
+    return {
+      address: `0xkkk`
     }
   }
 

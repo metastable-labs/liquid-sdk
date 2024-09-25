@@ -1,13 +1,10 @@
 import {
-  Passkey,
-  PasskeyRegistrationResult,
-  PasskeyAuthResult,
-} from 'react-native-passkey/lib/typescript/Passkey';
-import { PassKeyImplementation } from '../types';
-import {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
 } from '@simplewebauthn/types';
+
+import { Passkey } from 'react-native-passkey';
+import { NativeAuthenticationResult, NativePasskeyRegistrationResult, PassKeyImplementation } from '../types';
 
 export class NativePassKeys implements PassKeyImplementation {
   private passkey: Passkey;
@@ -18,14 +15,19 @@ export class NativePassKeys implements PassKeyImplementation {
 
   async createPassKeyCredential(
     options: PublicKeyCredentialCreationOptionsJSON,
-  ): Promise<PasskeyRegistrationResult> {
+  ): Promise<NativePasskeyRegistrationResult> {
     try {
       // Convert the challenge to a string if it's not already
       const challenge =
         typeof options.challenge === 'string'
           ? options.challenge
           : bufferToBase64URLString(options.challenge);
-      return await this.passkey.register(challenge, options.user.id as string);
+      const { rawAttestationObject, credentialID, rawClientDataJSON } = await this.passkey.register(challenge, options.user.id as string);
+      return {
+        clientDataJSON: rawClientDataJSON,
+        attestationObject: rawAttestationObject,
+        credentialId: credentialID
+      }
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to create PassKey: ${error.message}`);
@@ -37,14 +39,23 @@ export class NativePassKeys implements PassKeyImplementation {
 
   async signWithPassKey(
     options: PublicKeyCredentialRequestOptionsJSON,
-  ): Promise<PasskeyAuthResult> {
+  ): Promise<NativeAuthenticationResult> {
     try {
       // Convert the challenge to a string if it's not already
       const challenge =
         typeof options.challenge === 'string'
           ? options.challenge
           : bufferToBase64URLString(options.challenge);
-      return await this.passkey.auth(challenge);
+
+
+      const { rawAuthenticatorData, rawClientDataJSON, credentialID, signature, userID } = await this.passkey.auth(challenge);
+      return {
+        credentialId: credentialID,
+        authenticatorData: rawAuthenticatorData,
+        clientDataJSON: rawClientDataJSON,
+        signature,
+        userHandle: userID
+      }
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to sign with PassKey: ${error.message}`);

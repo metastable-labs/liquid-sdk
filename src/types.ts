@@ -1,9 +1,11 @@
+// import { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/types';
+// import {
+//   PasskeyAuthResult as NativePasskeyAuthResult,
+//   PasskeyRegistrationResult as NativePasskeyRegistrationResult,
+// } from 'react-native-passkey/lib/typescript/Passkey';
 import { Address } from 'viem';
-import {
-  PasskeyRegistrationResult as NativePasskeyRegistrationResult,
-  PasskeyAuthResult as NativePasskeyAuthResult,
-} from 'react-native-passkey/lib/typescript/Passkey';
-import { RegistrationResponseJSON, AuthenticationResponseJSON } from '@simplewebauthn/types';
+
+import { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
 
 export interface TokenInfo {
   address: Address;
@@ -120,10 +122,132 @@ export interface PublicKeyCredentialRequestOptions {
   rpId?: string;
 }
 
-export type PasskeyRegistrationResult = RegistrationResponseJSON | NativePasskeyRegistrationResult;
-export type PasskeyAuthResult = AuthenticationResponseJSON | NativePasskeyAuthResult;
 
+
+
+
+
+// export type WebAuthenticationResult  = {
+
+// }
+
+
+// export type NativeAuthenticationResult = {
+
+// }
+
+
+// export type WebPassKeyRegistrationResult  = {
+
+// }
+
+// export type NativePasskeyRegistrationResult = {
+
+// }
+
+
+// export type PasskeyRegistrationResult = WebPassKeyRegistrationResult | NativePasskeyRegistrationResult
+
+
+// export type PasskeyAuthResult = WebAuthenticationResult | NativeAuthenticationResult;
+
+
+// export interface PassKeyImplementation {
+//   createPassKeyCredential: (options: any) => Promise<PasskeyRegistrationResult>;
+//   signWithPassKey: (options: any) => Promise<PasskeyAuthResult>;
+// }
+
+
+
+
+
+
+/**
+ * Result of web-based passkey authentication.
+ */
+export type WebAuthenticationResult = {
+  id: string;
+  rawId: string;
+  type: 'public-key';
+  response: {
+    authenticatorData: string;
+    clientDataJSON: string;
+    signature: string;
+    userHandle?: string;
+  };
+};
+
+/**
+ * Result of native passkey authentication.
+ */
+export type NativeAuthenticationResult = {
+  credentialId: string;
+  authenticatorData: string;
+  clientDataJSON: string;
+  signature: string;
+  userHandle?: string;
+};
+
+/**
+ * Result of web-based passkey registration.
+ */
+export type WebPassKeyRegistrationResult = {
+  id: string;
+  rawId: string;
+  type: 'public-key';
+  response: {
+    attestationObject: string;
+    clientDataJSON: string;
+  };
+};
+
+/**
+ * Result of native passkey registration.
+ */
+export type NativePasskeyRegistrationResult = {
+  credentialId: string;
+  attestationObject: string;
+  clientDataJSON: string;
+};
+
+/**
+ * Combined type for passkey registration results.
+ */
+export type PasskeyRegistrationResult = WebPassKeyRegistrationResult | NativePasskeyRegistrationResult;
+
+/**
+ * Combined type for passkey authentication results.
+ */
+export type PasskeyAuthResult = WebAuthenticationResult | NativeAuthenticationResult;
+
+/**
+ * Options for creating a passkey credential.
+ */
+export type CreatePassKeyOptions = PublicKeyCredentialCreationOptionsJSON & {
+  // Add any additional options specific to your SDK
+  rpName: string;
+};
+
+/**
+ * Options for signing with a passkey.
+ */
+export type SignWithPassKeyOptions = PublicKeyCredentialRequestOptionsJSON
+
+/**
+ * Interface for passkey implementation.
+ */
 export interface PassKeyImplementation {
-  createPassKeyCredential: (options: any) => Promise<PasskeyRegistrationResult>;
-  signWithPassKey: (options: any) => Promise<PasskeyAuthResult>;
+  /**
+   * Create a new passkey credential.
+   * @param options Options for creating the passkey.
+   * @returns A promise that resolves to the registration result.
+   */
+  createPassKeyCredential: (options: CreatePassKeyOptions) => Promise<PasskeyRegistrationResult>;
+
+  /**
+   * Sign with an existing passkey.
+   * @param options Options for signing with the passkey.
+   * @returns A promise that resolves to the authentication result.
+   */
+  signWithPassKey: (options: SignWithPassKeyOptions) => Promise<PasskeyAuthResult>;
 }
