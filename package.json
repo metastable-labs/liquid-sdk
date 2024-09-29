@@ -42,5 +42,6 @@
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-native": ">=0.60.0"
-  }
+  },
+  "packageManager": "pnpm@9.6.0+sha1.65cd48c20dd329b7f455088b6dd17d4d5b6d02e3"
 }

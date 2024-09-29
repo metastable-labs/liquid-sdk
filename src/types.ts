@@ -125,43 +125,6 @@ export interface PublicKeyCredentialRequestOptions {
 
 
 
-
-
-// export type WebAuthenticationResult  = {
-
-// }
-
-
-// export type NativeAuthenticationResult = {
-
-// }
-
-
-// export type WebPassKeyRegistrationResult  = {
-
-// }
-
-// export type NativePasskeyRegistrationResult = {
-
-// }
-
-
-// export type PasskeyRegistrationResult = WebPassKeyRegistrationResult | NativePasskeyRegistrationResult
-
-
-// export type PasskeyAuthResult = WebAuthenticationResult | NativeAuthenticationResult;
-
-
-// export interface PassKeyImplementation {
-//   createPassKeyCredential: (options: any) => Promise<PasskeyRegistrationResult>;
-//   signWithPassKey: (options: any) => Promise<PasskeyAuthResult>;
-// }
-
-
-
-
-
-
 /**
  * Result of web-based passkey authentication.
  */
@@ -223,10 +186,7 @@ export type PasskeyAuthResult = WebAuthenticationResult | NativeAuthenticationRe
 /**
  * Options for creating a passkey credential.
  */
-export type CreatePassKeyOptions = PublicKeyCredentialCreationOptionsJSON & {
-  // Add any additional options specific to your SDK
-  rpName: string;
-};
+export type CreatePassKeyCredentialOptions = PublicKeyCredentialCreationOptionsJSON
 
 /**
  * Options for signing with a passkey.
@@ -242,7 +202,7 @@ export interface PassKeyImplementation {
    * @param options Options for creating the passkey.
    * @returns A promise that resolves to the registration result.
    */
-  createPassKeyCredential: (options: CreatePassKeyOptions) => Promise<PasskeyRegistrationResult>;
+  createPassKeyCredential: (options: CreatePassKeyCredentialOptions) => Promise<PasskeyRegistrationResult>;
 
   /**
    * Sign with an existing passkey.

@@ -9,29 +9,27 @@ import {
   parseEther,
 } from 'viem';
 import { base } from 'viem/chains';
-import { AerodromeConnectorABI, WrappedETHABI } from '../abis';
+import { AerodromeConnectorABI, CoinbaseSmartWalletABI, WrappedETHABI } from '../abis';
 import {
   Action,
   ActionType,
   PassKeyImplementation,
-  PasskeyRegistrationResult,
   PoolDetails,
-  TokenInfo,
+  TokenInfo
 } from '../types';
 import { AerodromeResolver } from './aerodromeResolvers';
+import { LiquidAPI } from './api';
 import {
   AERODROME_CONNECTOR_ADDRESS,
   CONNECTOR_PLUGIN_ADDRESS,
   IS_BROWSER,
   IS_REACT_NATIVE,
-  WETH_ADDRESS,
+  WETH_ADDRESS
 } from './constants';
 import {
   AerodromeError,
-  PassKeyError,
   SDKError,
-  UnsupportedEnvironmentError,
-  UserOperationError,
+  UnsupportedEnvironmentError
 } from './errors';
 import { createUserOperation, estimateUserOperationGas, sendUserOperation } from './userOperations';
 import {
@@ -45,109 +43,90 @@ export class LiquidSDK {
   private publicClient: PublicClient;
   private aerodromeResolver: AerodromeResolver;
   private passKeyImpl: PassKeyImplementation;
-
+  private api: LiquidAPI;
   /**
    * @notice Constructs a new instance of the LiquidSDK
    * @param rpcUrl The URL of the RPC endpoint to connect to
    * @param passKeyImpl The implementation of PassKey functionality
    * @throws {UnsupportedEnvironmentError} If the environment is not supported
    */
-  constructor(rpcUrl: string, passKeyImpl: PassKeyImplementation) {
+  constructor(rpcUrl: string, passKeyImpl: PassKeyImplementation, apiBaseUrl: string, apiKey: string) {
     if (!IS_BROWSER && !IS_REACT_NATIVE) {
       throw new UnsupportedEnvironmentError('LiquidSDK');
-    }
+    };
     this.publicClient = createPublicClient({
       chain: base,
       transport: http(rpcUrl),
-    }) as PublicClient;
+    }) as PublicClient
     this.aerodromeResolver = new AerodromeResolver(this.publicClient);
     this.passKeyImpl = passKeyImpl;
+
+    this.api = new LiquidAPI(apiBaseUrl, apiKey);
   }
 
-  /**
-   * @notice Executes a strategy consisting of multiple actions
-   * @param account The address of the account executing the strategy
-   * @param passKeyId The ID of the PassKey to use for signing
-   * @param actions An array of actions to execute
-   * @returns A promise that resolves to the transaction hash
-   * @throws {UserOperationError} If the strategy execution fails
-   */
-  async executeStrategy(account: Address, passKeyId: string, actions: Action[]): Promise<string> {
-    // try {
-    //   const calls = actions.map((action) => this.encodeAction(action));
-
-    //   const batchCalldata = encodeFunctionData({
-    //     abi: CoinbaseSmartWalletABI,
-    //     functionName: 'executeBatch',
-    //     args: [calls],
-    //   });
-
-    //   const authOptions = await this.getAuthenticationOptions(passKeyId);
-    //   const signature = await this.passKeyImpl.signWithPassKey(authOptions);
-
-    //   let signatureData: string;
-    //   if ('signature' in signature) {
-    //     // Native signature
-    //     signatureData = signature.signature;
-    //   } else {
-    //     // Web signature
-    //     signatureData = signature.response.signature;
-    //   }
-
-    //   let userOp = await createUserOperation(
-    //     this.publicClient,
-    //     account,
-    //     batchCalldata,
-    //     signatureData,
-    //   );
-    //   userOp = await estimateUserOperationGas(this.publicClient, userOp);
-    //   const txHash = await sendUserOperation(this.publicClient, userOp);
-
-    //   return txHash;
-    // } catch (error: unknown) {
-    //   if (error instanceof Error) {
-    //     throw new UserOperationError(`Failed to execute strategy: ${error.message}`);
-    //   } else {
-    //     throw new UserOperationError('Failed to execute strategy: Unknown error');
-    //   }
-    // }
-
-    return ""
-  }
-  /**
-   * @notice Creates a new smart account
-   * @param username The username associated with the new account
-   * @returns A promise that resolves to an object containing the address of the new account
-   * @throws {PassKeyError} If the smart account creation fails
-   */
   async createSmartAccount(username: string): Promise<{ address: Address }> {
-    // try {
-    //   // Fetch registration options from the backend
-    //   const options = await this.getRegistrationOptions(username);
+    try {
+      const options = await this.api.getRegistrationOptions(username);
+      const registrationResponse = await this.passKeyImpl.createPassKeyCredential(options);
+      const verificationResponse = await this.api.verifyRegistration(username, registrationResponse);
+      if (!verificationResponse.verified) {
+        throw new Error('Attestation verification failed');
+      }
+      const address = await this.deploySmartAccount(verificationResponse.publicKey);
+      await this.api.updateUserAddress(username, address);
+      return { address };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to create smart account: ${error.message}`);
+      } else {
+        throw new Error('Failed to create smart account: Unknown error');
+      }
+    }
+  }
 
-    //   const passKeyCreationResponse = await this.passKeyImpl.createPassKeyCredential(options);
+  async executeStrategy(username: string, account: Address, actions: Action[]): Promise<string> {
+    try {
+      const calls = actions.map((action) => this.encodeAction(action));
 
-    //   // Send attestation data to backend for verification
-    //   const verificationResponse = await this.verifyRegistration(passKeyCreationResponse);
+      const batchCalldata = encodeFunctionData({
+        abi: CoinbaseSmartWalletABI,
+        functionName: 'executeBatch',
+        args: [calls],
+      });
 
-    //   if (!verificationResponse.verified) {
-    //     throw new Error('Attestation verification failed');
-    //   }
+      const authOptions = await this.api.getAuthenticationOptions(username);
+      const signature = await this.passKeyImpl.signWithPassKey(authOptions);
+      const verificationResult = await this.api.verifyAuthentication(username, signature);
 
-    //   const address = await this.deploySmartAccount(verificationResponse.publicKey);
+      if (!verificationResult.success) {
+        throw new Error('Authentication failed');
+      }
 
-    //   return {
-    //     address,
-    //   };
-    // } catch (error: unknown) {
-    //   if (error instanceof Error) {
-    //     throw new PassKeyError(`Failed to create smart account: ${error.message}`);
-    //   } else {
-    //     throw new PassKeyError('Failed to create smart account: Unknown error');
-    //   }
-    // }
-    return {
-      address: `0xkkk`
+      let signatureData: string;
+      if ('signature' in signature) {
+        // Native signature
+        signatureData = signature.signature;
+      } else {
+        // Web signature
+        signatureData = signature.response.signature;
+      }
+
+      let userOp = await createUserOperation(
+        this.publicClient,
+        account,
+        batchCalldata,
+        signatureData,
+      );
+      userOp = await estimateUserOperationGas(this.publicClient, userOp);
+      const txHash = await sendUserOperation(this.publicClient, userOp);
+
+      return txHash;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to execute strategy: ${error.message}`);
+      } else {
+        throw new Error('Failed to execute strategy: Unknown error');
+      }
     }
   }
 
@@ -230,46 +209,7 @@ export class LiquidSDK {
       }
     }
   }
-  // backend implementation to return
-  private async verifyRegistration(result: PasskeyRegistrationResult): Promise<any> {
-    return result;
-  }
 
-  // backend implemntation
-  private async getAuthenticationOptions(
-    passKeyId: string,
-  ): Promise<PublicKeyCredentialRequestOptions> {
-    return {
-      challenge: crypto.getRandomValues(new Uint8Array(32)),
-      allowCredentials: [
-        {
-          id: Uint8Array.from(Buffer.from(passKeyId, 'base64')),
-          type: 'public-key',
-        },
-      ],
-      timeout: 60000,
-    };
-  }
-  // ideally this should be from the backend
-  private async getRegistrationOptions(
-    username: string,
-  ): Promise<PublicKeyCredentialCreationOptions> {
-    return {
-      challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp: {
-        name: 'Liquid',
-        id: 'liquidapp.com',
-      },
-      user: {
-        id: crypto.getRandomValues(new Uint8Array(16)),
-        name: username,
-        displayName: username,
-      },
-      pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
-      timeout: 60000,
-      attestation: 'direct' as const,
-    };
-  }
   /**
    * @notice Deploys a new smart account
    * @param publicKey The public key of the PassKey
@@ -424,7 +364,6 @@ export class LiquidSDK {
       };
     }
 
-    // For approvals, return the encoded data directly
     return {
       target,
       value,
