@@ -1,8 +1,4 @@
-// import { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/types';
-// import {
-//   PasskeyAuthResult as NativePasskeyAuthResult,
-//   PasskeyRegistrationResult as NativePasskeyRegistrationResult,
-// } from 'react-native-passkey/lib/typescript/Passkey';
+
 import { Address } from 'viem';
 
 import { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
@@ -50,7 +46,7 @@ export interface SwapAction {
   tokenOut: TokenInfo;
   amountIn: bigint;
   isStable: boolean;
-  to?: Address; // Optional, will use account address if not provided
+  to?: Address;
 }
 
 export interface ApproveAction {

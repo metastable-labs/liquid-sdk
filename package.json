@@ -7,8 +7,12 @@
   "description": "Liquid SDK for React Native and Web",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
+  "browser": "dist/index.umd.js",
   "react-native": "dist/index.native.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "format": "prettier --write .",
     "build": "rollup -c",
@@ -24,7 +28,9 @@
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.0",
+    "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^8.3.3",
     "@simplewebauthn/types": "^10.0.0",
     "@types/react": "^18.0.0",
@@ -42,6 +48,5 @@
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-native": ">=0.60.0"
-  },
-  "packageManager": "pnpm@9.6.0+sha1.65cd48c20dd329b7f455088b6dd17d4d5b6d02e3"
+  }
 }
