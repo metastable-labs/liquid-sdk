@@ -72,7 +72,14 @@ export class LiquidSDK {
       if (!verificationResponse.verified) {
         throw new Error('Attestation verification failed');
       }
-      const address = await this.deploySmartAccount(verificationResponse.publicKey);
+      const rawPubKeyString = atob(verificationResponse.publicKey)
+      const rawPubKeyLen = rawPubKeyString.length;
+      const bytes = new Uint8Array(rawPubKeyLen);
+
+      for (let i = 0; i < rawPubKeyLen; i++) {
+        bytes[i] = rawPubKeyString.charCodeAt(i)
+      }
+      const address = await this.deploySmartAccount(bytes);
       await this.api.updateUserAddress(username, address);
       return { address };
     } catch (error) {
@@ -216,10 +223,10 @@ export class LiquidSDK {
    * @returns A promise that resolves to the address of the new smart account
    * @throws {SDKError} If the smart account deployment fails
    */
-  private async deploySmartAccount(publicKey: string): Promise<Address> {
+  private async deploySmartAccount(publicKey: Uint8Array): Promise<Address> {
     try {
       const salt = parseEther('1'); //TODO: will use a unique nonce here
-      const owners = [publicKey];
+      // const owners = [...publicKey];
 
       // Create UserOperation for account creation
       let userOp = await createUserOperation(
@@ -227,7 +234,7 @@ export class LiquidSDK {
         '0x', // 0x because we're creating a new account
         '0x', // The 'data' is not used for account creation
         '', // Empty signature for account creation
-        owners,
+        publicKey,
         salt,
       );
 

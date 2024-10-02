@@ -1,15 +1,15 @@
-import { Address, Hex, encodeFunctionData, PublicClient, parseEther } from 'viem';
-import { UserOperation } from '../types';
-import { UserOperationError } from './errors';
+import { Address, Hex, PublicClient, encodeFunctionData, parseEther } from 'viem';
 import { CoinbaseSmartWalletABI, CoinbaseSmartWalletFactoryABI, EntryPointABI } from '../abis';
+import { UserOperation } from '../types';
 import { COINBASE_WALLET_FACTORY_ADDRESS, ENTRY_POINT_ADDRESS } from './constants';
+import { UserOperationError } from './errors';
 
 export async function createUserOperation(
   publicClient: PublicClient,
   sender: Address,
   data: Hex,
   signature: string,
-  owners?: string[], // For account creation
+  owners?: Uint8Array, // For account creation
   salt?: bigint, // For account creation
 ): Promise<UserOperation> {
   try {
