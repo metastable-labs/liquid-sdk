@@ -1,7 +1,9 @@
-
 import { Address } from 'viem';
 
-import { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
+import {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/types';
 
 export interface TokenInfo {
   address: Address;
@@ -118,9 +120,6 @@ export interface PublicKeyCredentialRequestOptions {
   rpId?: string;
 }
 
-
-
-
 /**
  * Result of web-based passkey authentication.
  */
@@ -172,7 +171,9 @@ export type NativePasskeyRegistrationResult = {
 /**
  * Combined type for passkey registration results.
  */
-export type PasskeyRegistrationResult = WebPassKeyRegistrationResult | NativePasskeyRegistrationResult;
+export type PasskeyRegistrationResult =
+  | WebPassKeyRegistrationResult
+  | NativePasskeyRegistrationResult;
 
 /**
  * Combined type for passkey authentication results.
@@ -182,12 +183,12 @@ export type PasskeyAuthResult = WebAuthenticationResult | NativeAuthenticationRe
 /**
  * Options for creating a passkey credential.
  */
-export type CreatePassKeyCredentialOptions = PublicKeyCredentialCreationOptionsJSON
+export type CreatePassKeyCredentialOptions = PublicKeyCredentialCreationOptionsJSON;
 
 /**
  * Options for signing with a passkey.
  */
-export type SignWithPassKeyOptions = PublicKeyCredentialRequestOptionsJSON
+export type SignWithPassKeyOptions = PublicKeyCredentialRequestOptionsJSON;
 
 /**
  * Interface for passkey implementation.
@@ -198,7 +199,9 @@ export interface PassKeyImplementation {
    * @param options Options for creating the passkey.
    * @returns A promise that resolves to the registration result.
    */
-  createPassKeyCredential: (options: CreatePassKeyCredentialOptions) => Promise<PasskeyRegistrationResult>;
+  createPassKeyCredential: (
+    options: CreatePassKeyCredentialOptions,
+  ) => Promise<PasskeyRegistrationResult>;
 
   /**
    * Sign with an existing passkey.

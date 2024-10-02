@@ -4,7 +4,11 @@ import {
 } from '@simplewebauthn/types';
 
 import { Passkey } from 'react-native-passkey';
-import { NativeAuthenticationResult, NativePasskeyRegistrationResult, PassKeyImplementation } from '../types';
+import {
+  NativeAuthenticationResult,
+  NativePasskeyRegistrationResult,
+  PassKeyImplementation,
+} from '../types';
 
 export class NativePassKeys implements PassKeyImplementation {
   private passkey: Passkey;
@@ -22,12 +26,15 @@ export class NativePassKeys implements PassKeyImplementation {
         typeof options.challenge === 'string'
           ? options.challenge
           : bufferToBase64URLString(options.challenge);
-      const { rawAttestationObject, credentialID, rawClientDataJSON } = await this.passkey.register(challenge, options.user.id as string);
+      const { rawAttestationObject, credentialID, rawClientDataJSON } = await this.passkey.register(
+        challenge,
+        options.user.id as string,
+      );
       return {
         clientDataJSON: rawClientDataJSON,
         attestationObject: rawAttestationObject,
-        credentialId: credentialID
-      }
+        credentialId: credentialID,
+      };
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to create PassKey: ${error.message}`);
@@ -47,15 +54,15 @@ export class NativePassKeys implements PassKeyImplementation {
           ? options.challenge
           : bufferToBase64URLString(options.challenge);
 
-
-      const { rawAuthenticatorData, rawClientDataJSON, credentialID, signature, userID } = await this.passkey.auth(challenge);
+      const { rawAuthenticatorData, rawClientDataJSON, credentialID, signature, userID } =
+        await this.passkey.auth(challenge);
       return {
         credentialId: credentialID,
         authenticatorData: rawAuthenticatorData,
         clientDataJSON: rawClientDataJSON,
         signature,
-        userHandle: userID
-      }
+        userHandle: userID,
+      };
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to sign with PassKey: ${error.message}`);

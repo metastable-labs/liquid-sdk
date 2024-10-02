@@ -10,13 +10,7 @@ import {
 } from 'viem';
 import { base } from 'viem/chains';
 import { AerodromeConnectorABI, CoinbaseSmartWalletABI, WrappedETHABI } from '../abis';
-import {
-  Action,
-  ActionType,
-  PassKeyImplementation,
-  PoolDetails,
-  TokenInfo
-} from '../types';
+import { Action, ActionType, PassKeyImplementation, PoolDetails, TokenInfo } from '../types';
 import { AerodromeResolver } from './aerodromeResolvers';
 import { LiquidAPI } from './api';
 import {
@@ -24,20 +18,11 @@ import {
   CONNECTOR_PLUGIN_ADDRESS,
   IS_BROWSER,
   IS_REACT_NATIVE,
-  WETH_ADDRESS
+  WETH_ADDRESS,
 } from './constants';
-import {
-  AerodromeError,
-  SDKError,
-  UnsupportedEnvironmentError
-} from './errors';
+import { AerodromeError, SDKError, UnsupportedEnvironmentError } from './errors';
 import { createUserOperation, estimateUserOperationGas, sendUserOperation } from './userOperations';
-import {
-  calculateDeadline,
-  calculateMinAmount,
-  getTokenBalance,
-  getTokenList
-} from './utils';
+import { calculateDeadline, calculateMinAmount, getTokenBalance, getTokenList } from './utils';
 
 export class LiquidSDK {
   private publicClient: PublicClient;
@@ -50,14 +35,19 @@ export class LiquidSDK {
    * @param passKeyImpl The implementation of PassKey functionality
    * @throws {UnsupportedEnvironmentError} If the environment is not supported
    */
-  constructor(rpcUrl: string, passKeyImpl: PassKeyImplementation, apiBaseUrl: string, apiKey: string) {
+  constructor(
+    rpcUrl: string,
+    passKeyImpl: PassKeyImplementation,
+    apiBaseUrl: string,
+    apiKey: string,
+  ) {
     if (!IS_BROWSER && !IS_REACT_NATIVE) {
       throw new UnsupportedEnvironmentError('LiquidSDK');
-    };
+    }
     this.publicClient = createPublicClient({
       chain: base,
       transport: http(rpcUrl),
-    }) as PublicClient
+    }) as PublicClient;
     this.aerodromeResolver = new AerodromeResolver(this.publicClient);
     this.passKeyImpl = passKeyImpl;
 
@@ -68,16 +58,19 @@ export class LiquidSDK {
     try {
       const options = await this.api.getRegistrationOptions(username);
       const registrationResponse = await this.passKeyImpl.createPassKeyCredential(options);
-      const verificationResponse = await this.api.verifyRegistration(username, registrationResponse);
+      const verificationResponse = await this.api.verifyRegistration(
+        username,
+        registrationResponse,
+      );
       if (!verificationResponse.verified) {
         throw new Error('Attestation verification failed');
       }
-      const rawPubKeyString = atob(verificationResponse.publicKey)
+      const rawPubKeyString = atob(verificationResponse.publicKey);
       const rawPubKeyLen = rawPubKeyString.length;
       const bytes = new Uint8Array(rawPubKeyLen);
 
       for (let i = 0; i < rawPubKeyLen; i++) {
-        bytes[i] = rawPubKeyString.charCodeAt(i)
+        bytes[i] = rawPubKeyString.charCodeAt(i);
       }
       const address = await this.deploySmartAccount(bytes);
       await this.api.updateUserAddress(username, address);
