@@ -12,9 +12,22 @@ import {
   PublicClient,
   SignableMessage,
 } from 'viem';
-import { toCoinbaseSmartAccount, WebAuthnAccount } from 'viem/account-abstraction';
+import {
+  BundlerClient,
+  createBundlerClient,
+  entryPoint06Abi,
+  getUserOperationHash,
+  SmartAccount,
+  toCoinbaseSmartAccount,
+  WebAuthnAccount,
+} from 'viem/account-abstraction';
 import { base } from 'viem/chains';
-import { AerodromeConnectorABI, CoinbaseSmartWalletABI, WrappedETHABI } from '../abis';
+import {
+  AerodromeConnectorABI,
+  CoinbaseSmartWalletABI,
+  EntryPointABI,
+  WrappedETHABI,
+} from '../abis';
 import {
   Action,
   ActionType,
@@ -29,6 +42,7 @@ import { LiquidAPI } from './api';
 import {
   AERODROME_CONNECTOR_ADDRESS,
   CONNECTOR_PLUGIN_ADDRESS,
+  ENTRY_POINT_ADDRESS,
   IS_BROWSER,
   IS_REACT_NATIVE,
   WETH_ADDRESS,
@@ -36,9 +50,14 @@ import {
 import { AerodromeError, SDKError, UnsupportedEnvironmentError } from './errors';
 import { createUserOperation, estimateUserOperationGas, sendUserOperation } from './userOperations';
 import { calculateDeadline, calculateMinAmount, getTokenBalance, getTokenList } from './utils';
+import {
+  EstimateUserOperationGasReturnType,
+  UserOperation,
+} from 'viem/_types/account-abstraction/types/userOperation';
 
 export class LiquidSDK {
   private publicClient: PublicClient;
+  private bundlerClient: BundlerClient;
   private aerodromeResolver: AerodromeResolver;
   private passKeyImpl: PassKeyImplementation;
   private api: LiquidAPI;
@@ -61,13 +80,20 @@ export class LiquidSDK {
       chain: base,
       transport: http(rpcUrl),
     }) as PublicClient;
+    this.bundlerClient = createBundlerClient({
+      client: this.publicClient,
+      transport: http('https://public.pimlico.io/v2/1/rpc'),
+      paymaster: true,
+    });
     this.aerodromeResolver = new AerodromeResolver(this.publicClient);
     this.passKeyImpl = passKeyImpl;
 
     this.api = new LiquidAPI(apiBaseUrl, apiKey);
   }
 
-  async createSmartAccount(username: string): Promise<{ address: Address }> {
+  async createSmartAccount(
+    username: string,
+  ): Promise<{ address: Address; smartAccount: SmartAccount }> {
     try {
       const options = await this.api.getRegistrationOptions(username);
       console.log('Registration options:', options);
@@ -118,7 +144,7 @@ export class LiquidSDK {
 
       const address = await smartAccount.getAddress();
       await this.api.updateUserAddress(username, address);
-      return { address };
+      return { address, smartAccount };
     } catch (error) {
       console.error('Error in createSmartAccount:', error);
       if (error instanceof Error) {
@@ -171,7 +197,7 @@ export class LiquidSDK {
     }
     return str;
   }
-  async executeStrategy(username: string, account: Address, actions: Action[]): Promise<string> {
+  async executeStrategy(smartAccount: SmartAccount, actions: Action[]): Promise<string> {
     try {
       const calls = actions.map((action) => this.encodeAction(action));
 
@@ -181,33 +207,30 @@ export class LiquidSDK {
         args: [calls],
       });
 
-      const authOptions = await this.api.getAuthenticationOptions(username);
-      const signature = await this.passKeyImpl.signWithPassKey(authOptions);
-      const verificationResult = await this.api.verifyAuthentication(username, signature);
+      // estimate gas
+      const gas = await this.bundlerClient.estimateUserOperationGas({
+        account: smartAccount,
+        callData: batchCalldata,
+      });
+      // create userOp
+      const userOperation = await this.createUserOperation(smartAccount, batchCalldata, gas);
 
-      if (!verificationResult.success) {
-        throw new Error('Authentication failed');
-      }
+      // Sign the user operation
+      const signedUserOperation = await smartAccount.signUserOperation(userOperation);
 
-      let signatureData: string;
-      if ('signature' in signature) {
-        // Native signature
-        signatureData = signature.signature;
-      } else {
-        // Web signature
-        signatureData = signature.response.signature;
-      }
+      // Send the user operation
+      const userOpHash = await this.bundlerClient.sendUserOperation({
+        account: smartAccount,
+        callData: batchCalldata,
+        signature: signedUserOperation,
+      });
 
-      let userOp = await createUserOperation(
-        this.publicClient,
-        account,
-        batchCalldata,
-        signatureData,
-      );
-      userOp = await estimateUserOperationGas(this.publicClient, userOp);
-      const txHash = await sendUserOperation(this.publicClient, userOp);
+      // Wait for the transaction receipt
+      const receipt = await this.bundlerClient.waitForUserOperationReceipt({
+        hash: userOpHash,
+      });
 
-      return txHash;
+      return receipt.receipt.transactionHash;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to execute strategy: ${error.message}`);
@@ -215,6 +238,32 @@ export class LiquidSDK {
         throw new Error('Failed to execute strategy: Unknown error');
       }
     }
+  }
+
+  private async createUserOperation(
+    smartAccount: SmartAccount,
+    callData: Hex,
+    gas: EstimateUserOperationGasReturnType,
+  ): Promise<UserOperation> {
+    const nonce = await this.publicClient.readContract({
+      address: ENTRY_POINT_ADDRESS,
+      abi: entryPoint06Abi,
+      functionName: 'getNonce',
+      args: [smartAccount.address, 0n],
+    });
+
+    return {
+      sender: smartAccount.address,
+      nonce,
+      initCode: '0x',
+      callData,
+      callGasLimit: gas.callGasLimit,
+      verificationGasLimit: BigInt(Math.max(Number(gas.verificationGasLimit ?? 0n), 800_000)),
+      preVerificationGas: gas.preVerificationGas,
+      maxFeePerGas: await this.publicClient.getGasPrice(),
+      maxPriorityFeePerGas: parseEther('0.1', 'gwei'),
+      signature: '0x',
+    };
   }
 
   async getUserPools(userAddress: Address): Promise<PoolDetails[]> {
@@ -311,46 +360,6 @@ export class LiquidSDK {
     const signatureHex = signatureBuffer.toString('hex');
 
     return `0x${signatureHex}` as `0x${string}`;
-  }
-
-  /**
-   * @notice Deploys a new smart account
-   * @param publicKey The public key of the PassKey
-   * @returns A promise that resolves to the address of the new smart account
-   * @throws {SDKError} If the smart account deployment fails
-   */
-  private async deploySmartAccount(publicKey: Uint8Array): Promise<Address> {
-    try {
-      const salt = parseEther('1'); //TODO: will use a unique nonce here
-      // const owners = [...publicKey];
-
-      // Create UserOperation for account creation
-      let userOp = await createUserOperation(
-        this.publicClient,
-        '0x', // 0x because we're creating a new account
-        '0x', // The 'data' is not used for account creation
-        '', // Empty signature for account creation
-        publicKey,
-        salt,
-      );
-
-      // Estimate gas for UserOperation
-      userOp = await estimateUserOperationGas(this.publicClient, userOp);
-
-      // Send UserOperation to EntryPoint
-      const txHash = await sendUserOperation(this.publicClient, userOp);
-
-      // Wait for the transaction to be mined and get the receipt
-      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: txHash });
-
-      return userOp.sender as `0x${string}`;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        throw new SDKError(`Failed to deploy smart account: ${error.message}`);
-      } else {
-        throw new SDKError('Failed to deploy smart account: Unknown error');
-      }
-    }
   }
 
   private convertSignResultToSignReturnType(signResult: PasskeyAuthResult, challenge: Hex) {
