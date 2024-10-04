@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import {
   Address,
   createPublicClient,
@@ -144,11 +145,7 @@ export class LiquidSDK {
     attestationObject = this.ensureProperBase64(attestationObject);
     console.log("Raw attestationObject After 2:", attestationObject);
     try {
-      return new Uint8Array(
-        atob(attestationObject)
-          .split('')
-          .map((c) => c.charCodeAt(0))
-      );
+      return new Uint8Array(Buffer.from(attestationObject, 'base64'));
     } catch (error) {
       console.error('Error decoding attestationObject:', error);
       throw new Error('Failed to decode attestationObject');
@@ -312,18 +309,8 @@ export class LiquidSDK {
       // Native authentication result
       signature = signResult.signature;
     }
-
-    // Convert the base64 signature to a Uint8Array
-    const signatureArray = new Uint8Array(
-      atob(signature)
-        .split('')
-        .map((c) => c.charCodeAt(0)),
-    );
-
-    // Convert the Uint8Array to a hex string
-    const signatureHex = Array.from(signatureArray)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    const signatureBuffer = Buffer.from(signature, 'base64');
+    const signatureHex = signatureBuffer.toString('hex');
 
     return `0x${signatureHex}` as `0x${string}`;
   }
@@ -389,8 +376,8 @@ export class LiquidSDK {
     authenticatorData = this.ensureProperBase64(authenticatorData);
 
 
-    const signatureHex = `0x${Buffer.from(atob(signature), 'binary').toString('hex')}` as Hex;
-    const authenticatorDataHex = `0x${Buffer.from(atob(authenticatorData), 'binary').toString('hex')}` as Hex;
+    const signatureHex = `0x${Buffer.from(signature, 'base64').toString('hex')}` as Hex;
+    const authenticatorDataHex = `0x${Buffer.from(authenticatorData, 'base64').toString('hex')}` as Hex;
 
     const webAuthnData = {
       authenticatorData: authenticatorDataHex,

@@ -28,11 +28,11 @@
     "dev": "rollup -c -w",
     "lint": "eslint src/**/*.ts",
     "test": "jest"
-    
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.0.0",
     "@simplewebauthn/browser": "^10.0.0",
+    "buffer": "^6.0.3",
     "react-native-passkey": "^1.0.2",
     "viem": "^2.21.3"
   },
