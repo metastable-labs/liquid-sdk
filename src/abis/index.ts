@@ -9,7 +9,13 @@ import * as EntryPointABI from './EntryPointABI.json';
 import * as WrappedETHABI from './WrappedETHABI.json';
 
 export {
-  AerodromeConnectorABI, AerodromeFactoryABI, AerodromePoolABI, AerodromeRouterABI, CoinbaseSmartWalletABI,
-  CoinbaseSmartWalletFactoryABI, ConnectorPluginABI, EntryPointABI, WrappedETHABI
+  AerodromeConnectorABI,
+  AerodromeFactoryABI,
+  AerodromePoolABI,
+  AerodromeRouterABI,
+  CoinbaseSmartWalletABI,
+  CoinbaseSmartWalletFactoryABI,
+  ConnectorPluginABI,
+  EntryPointABI,
+  WrappedETHABI,
 };
-

@@ -90,7 +90,7 @@ A Promise that resolves to the transaction hash of the executed strategy.
 
 ```typescript
 const actions = [
-      {
+  {
     type: 'APPROVE',
     token: '0x...',
     spender: '0x...',
@@ -250,7 +250,7 @@ try {
     { address: '0x...', symbol: 'TOKEN_B', decimals: 18 },
     true,
     '1000000000000000000', // 1 TOKEN_A
-    true
+    true,
   );
   console.log('Quote:', quote);
 } catch (error) {
