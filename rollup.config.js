@@ -9,7 +9,6 @@ const commonPlugins = [
     preferBuiltins: true,
   }),
   commonjs(),
-  typescript({ tsconfig: './tsconfig.json' }),
   json(),
   terser(),
 ];
@@ -19,47 +18,58 @@ export default [
   {
     input: 'src/index.ts',
     output: {
-      file: 'dist/index.js',
+      dir: 'dist/cjs',
       format: 'cjs',
       exports: 'named',
+      entryFileNames: '[name].js',
     },
     external: ['react', 'react-native', 'viem'],
-    plugins: commonPlugins,
+    plugins: [
+      ...commonPlugins,
+      typescript({
+        tsconfig: './tsconfig.json',
+        declaration: true,
+        declarationDir: './dist/cjs',
+        rootDir: './src',
+      }),
+    ],
   },
   // ES module build
   {
     input: 'src/index.ts',
     output: {
-      file: 'dist/index.mjs',
+      dir: 'dist/esm',
       format: 'es',
+      entryFileNames: '[name].js',
     },
     external: ['react', 'react-native', 'viem'],
-    plugins: commonPlugins,
-  },
-  // Browser-friendly UMD build
-  {
-    input: 'src/index.ts',
-    output: {
-      name: 'LiquidSDK',
-      file: 'dist/index.umd.js',
-      format: 'umd',
-      globals: {
-        react: 'React',
-        'react-native': 'ReactNative',
-        viem: 'viem',
-      },
-    },
-    external: ['react', 'react-native', 'viem'],
-    plugins: commonPlugins,
+    plugins: [
+      ...commonPlugins,
+      typescript({
+        tsconfig: './tsconfig.json',
+        declaration: true,
+        declarationDir: './dist/esm',
+        rootDir: './src',
+      }),
+    ],
   },
   // React Native specific build
   {
     input: 'src/index.native.ts',
     output: {
-      file: 'dist/index.native.js',
+      dir: 'dist/native',
       format: 'es',
+      entryFileNames: '[name].js',
     },
     external: ['react', 'react-native', 'viem'],
-    plugins: commonPlugins,
+    plugins: [
+      ...commonPlugins,
+      typescript({
+        tsconfig: './tsconfig.json',
+        declaration: true,
+        declarationDir: './dist/native',
+        rootDir: './src',
+      }),
+    ],
   },
 ];

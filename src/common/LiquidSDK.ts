@@ -1,16 +1,29 @@
+import { Buffer } from 'buffer';
 import {
   Address,
-  Hex,
-  PublicClient,
   createPublicClient,
   encodeFunctionData,
   erc20Abi,
+  hashMessage,
+  hashTypedData,
+  Hex,
   http,
   parseEther,
+  PublicClient,
+  SignableMessage,
 } from 'viem';
+import { toCoinbaseSmartAccount, WebAuthnAccount } from 'viem/account-abstraction';
 import { base } from 'viem/chains';
 import { AerodromeConnectorABI, CoinbaseSmartWalletABI, WrappedETHABI } from '../abis';
-import { Action, ActionType, PassKeyImplementation, PoolDetails, TokenInfo } from '../types';
+import {
+  Action,
+  ActionType,
+  PasskeyAuthResult,
+  PassKeyImplementation,
+  PasskeyRegistrationResult,
+  PoolDetails,
+  TokenInfo,
+} from '../types';
 import { AerodromeResolver } from './aerodromeResolvers';
 import { LiquidAPI } from './api';
 import {
@@ -57,25 +70,57 @@ export class LiquidSDK {
   async createSmartAccount(username: string): Promise<{ address: Address }> {
     try {
       const options = await this.api.getRegistrationOptions(username);
+      console.log('Registration options:', options);
       const registrationResponse = await this.passKeyImpl.createPassKeyCredential(options);
+      console.log('Registration response:', registrationResponse);
+
       const verificationResponse = await this.api.verifyRegistration(
         username,
         registrationResponse,
       );
+      console.log('Verification response:', verificationResponse);
+
       if (!verificationResponse.verified) {
         throw new Error('Attestation verification failed');
       }
-      const rawPubKeyString = atob(verificationResponse.publicKey);
-      const rawPubKeyLen = rawPubKeyString.length;
-      const bytes = new Uint8Array(rawPubKeyLen);
 
-      for (let i = 0; i < rawPubKeyLen; i++) {
-        bytes[i] = rawPubKeyString.charCodeAt(i);
-      }
-      const address = await this.deploySmartAccount(bytes);
+      const publicKey = this.getPublicKeyFromRegistrationResponse(registrationResponse);
+      console.log('Public key:', publicKey);
+
+      const credentialId = this.getCredentialIdFromRegistrationResponse(registrationResponse);
+
+      const webAuthnAccount: WebAuthnAccount = {
+        type: 'webAuthn',
+        publicKey: `0x${Array.from(publicKey)
+          .map((byte) => byte.toString(16).padStart(2, '0'))
+          .join('')}` as `0x${string}`,
+        sign: async ({ hash }: { hash: Hex }) => {
+          const signResult = await this.passKeyImpl.signWithPassKey({
+            challenge: hash,
+            allowCredentials: [{ id: credentialId, type: 'public-key' }],
+          });
+          return this.convertSignResultToSignReturnType(signResult, hash);
+        },
+        signMessage: async ({ message }: { message: SignableMessage }) => {
+          const hash = hashMessage(message);
+          return webAuthnAccount.sign({ hash });
+        },
+        signTypedData: async (typedData) => {
+          const hash = hashTypedData(typedData);
+          return webAuthnAccount.sign({ hash });
+        },
+      };
+
+      const smartAccount = await toCoinbaseSmartAccount({
+        client: this.publicClient,
+        owners: [webAuthnAccount],
+      });
+
+      const address = await smartAccount.getAddress();
       await this.api.updateUserAddress(username, address);
       return { address };
     } catch (error) {
+      console.error('Error in createSmartAccount:', error);
       if (error instanceof Error) {
         throw new Error(`Failed to create smart account: ${error.message}`);
       } else {
@@ -84,6 +129,48 @@ export class LiquidSDK {
     }
   }
 
+  private getPublicKeyFromRegistrationResponse(response: PasskeyRegistrationResult): Uint8Array {
+    let attestationObject: string;
+
+    if ('response' in response) {
+      attestationObject = response.response.attestationObject;
+    } else {
+      attestationObject = response.attestationObject;
+    }
+
+    console.log('Raw attestationObject:', attestationObject);
+    attestationObject = this.base64UrlToBase64(attestationObject);
+    console.log('Raw attestationObject After 1 :', attestationObject);
+    attestationObject = this.ensureProperBase64(attestationObject);
+    console.log('Raw attestationObject After 2:', attestationObject);
+    try {
+      return new Uint8Array(Buffer.from(attestationObject, 'base64'));
+    } catch (error) {
+      console.error('Error decoding attestationObject:', error);
+      throw new Error('Failed to decode attestationObject');
+    }
+  }
+
+  private getCredentialIdFromRegistrationResponse(response: PasskeyRegistrationResult): string {
+    if ('id' in response) {
+      // Web implementation
+      return response.id;
+    } else {
+      // Native implementation
+      return response.credentialId;
+    }
+  }
+
+  private base64UrlToBase64(base64url: string): string {
+    return base64url.replace(/-/g, '+').replace(/_/g, '/');
+  }
+  private ensureProperBase64(str: string): string {
+    str = str.replace(/[^A-Za-z0-9+/=]/g, '');
+    while (str.length % 4) {
+      str += '=';
+    }
+    return str;
+  }
   async executeStrategy(username: string, account: Address, actions: Action[]): Promise<string> {
     try {
       const calls = actions.map((action) => this.encodeAction(action));
@@ -210,6 +297,22 @@ export class LiquidSDK {
     }
   }
 
+  private convertSignatureToHex(signResult: PasskeyAuthResult): `0x${string}` {
+    let signature: string;
+
+    if ('response' in signResult) {
+      // Web authentication result
+      signature = signResult.response.signature;
+    } else {
+      // Native authentication result
+      signature = signResult.signature;
+    }
+    const signatureBuffer = Buffer.from(signature, 'base64');
+    const signatureHex = signatureBuffer.toString('hex');
+
+    return `0x${signatureHex}` as `0x${string}`;
+  }
+
   /**
    * @notice Deploys a new smart account
    * @param publicKey The public key of the PassKey
@@ -248,6 +351,44 @@ export class LiquidSDK {
         throw new SDKError('Failed to deploy smart account: Unknown error');
       }
     }
+  }
+
+  private convertSignResultToSignReturnType(signResult: PasskeyAuthResult, challenge: Hex) {
+    let signature: string;
+    let authenticatorData: string;
+    let clientDataJSON: string;
+
+    if ('response' in signResult) {
+      // Web authentication result
+      signature = signResult.response.signature;
+      authenticatorData = signResult.response.authenticatorData;
+      clientDataJSON = signResult.response.clientDataJSON;
+    } else {
+      // Native authentication result
+      signature = signResult.signature;
+      authenticatorData = signResult.authenticatorData;
+      clientDataJSON = signResult.clientDataJSON;
+    }
+
+    signature = this.ensureProperBase64(signature);
+    authenticatorData = this.ensureProperBase64(authenticatorData);
+
+    const signatureHex = `0x${Buffer.from(signature, 'base64').toString('hex')}` as Hex;
+    const authenticatorDataHex =
+      `0x${Buffer.from(authenticatorData, 'base64').toString('hex')}` as Hex;
+
+    const webAuthnData = {
+      authenticatorData: authenticatorDataHex,
+      challengeIndex: clientDataJSON.indexOf(challenge.slice(2)),
+      clientDataJSON,
+      typeIndex: clientDataJSON.indexOf('"type":"webauthn.get"'),
+      userVerificationRequired: false,
+    };
+
+    return {
+      signature: signatureHex,
+      webauthn: webAuthnData,
+    };
   }
 
   /**
