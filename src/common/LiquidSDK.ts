@@ -69,6 +69,7 @@ export class LiquidSDK {
    */
   constructor(
     rpcUrl: string,
+    bundlerUrl: string,
     passKeyImpl: PassKeyImplementation,
     apiBaseUrl: string,
     apiKey: string,
@@ -82,7 +83,7 @@ export class LiquidSDK {
     }) as PublicClient;
     this.bundlerClient = createBundlerClient({
       client: this.publicClient,
-      transport: http('https://public.pimlico.io/v2/1/rpc'),
+      transport: http(bundlerUrl),
       paymaster: true,
     });
     this.aerodromeResolver = new AerodromeResolver(this.publicClient);
