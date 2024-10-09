@@ -22,6 +22,7 @@
   "files": [
     "dist"
   ],
+  "packageManager": "bun@1.1.30",
   "scripts": {
     "format": "prettier --write .",
     "build": "rollup -c",
