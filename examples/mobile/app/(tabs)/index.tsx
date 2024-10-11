@@ -1,5 +1,5 @@
 import { Image, StyleSheet, Text } from 'react-native';
-import {NativePassKeys, LiquidSDK} from '../../../../dist/native/index.native'
+import { NativePassKeys, LiquidSDK } from '../../../../dist/native/index.native';
 
 import { ThemedView } from '@/components/ThemedView';
 

@@ -1,54 +1,30 @@
-import { Buffer } from 'buffer';
 import {
   Address,
   createPublicClient,
   encodeFunctionData,
   erc20Abi,
-  hashMessage,
-  hashTypedData,
   Hex,
   http,
   parseEther,
   PublicClient,
-  SignableMessage,
 } from 'viem';
 import {
   BundlerClient,
   createBundlerClient,
   entryPoint06Abi,
-  getUserOperationHash,
   SmartAccount,
-  toCoinbaseSmartAccount,
-  WebAuthnAccount,
 } from 'viem/account-abstraction';
 import { base } from 'viem/chains';
-import {
-  AerodromeConnectorABI,
-  CoinbaseSmartWalletABI,
-  EntryPointABI,
-  WrappedETHABI,
-} from '../abis';
-import {
-  Action,
-  ActionType,
-  PasskeyAuthResult,
-  PassKeyImplementation,
-  PasskeyRegistrationResult,
-  PoolDetails,
-  TokenInfo,
-} from '../types';
+import { AerodromeConnectorABI, CoinbaseSmartWalletABI, WrappedETHABI } from '../abis';
+import { Action, ActionType, PoolDetails, TokenInfo } from '../types';
 import { AerodromeResolver } from './aerodromeResolvers';
-import { LiquidAPI } from './api';
 import {
   AERODROME_CONNECTOR_ADDRESS,
   CONNECTOR_PLUGIN_ADDRESS,
   ENTRY_POINT_ADDRESS,
-  IS_BROWSER,
-  IS_REACT_NATIVE,
   WETH_ADDRESS,
 } from './constants';
-import { AerodromeError, SDKError, UnsupportedEnvironmentError } from './errors';
-import { createUserOperation, estimateUserOperationGas, sendUserOperation } from './userOperations';
+import { AerodromeError, SDKError } from './errors';
 import { calculateDeadline, calculateMinAmount, getTokenBalance, getTokenList } from './utils';
 import {
   EstimateUserOperationGasReturnType,
@@ -59,24 +35,12 @@ export class LiquidSDK {
   private publicClient: PublicClient;
   private bundlerClient: BundlerClient;
   private aerodromeResolver: AerodromeResolver;
-  private passKeyImpl: PassKeyImplementation;
-  private api: LiquidAPI;
   /**
    * @notice Constructs a new instance of the LiquidSDK
    * @param rpcUrl The URL of the RPC endpoint to connect to
-   * @param passKeyImpl The implementation of PassKey functionality
-   * @throws {UnsupportedEnvironmentError} If the environment is not supported
+   * @param bundlerUrl The url of bundler
    */
-  constructor(
-    rpcUrl: string,
-    bundlerUrl: string,
-    passKeyImpl: PassKeyImplementation,
-    apiBaseUrl: string,
-    apiKey: string,
-  ) {
-    if (!IS_BROWSER && !IS_REACT_NATIVE) {
-      throw new UnsupportedEnvironmentError('LiquidSDK');
-    }
+  constructor(rpcUrl: string, bundlerUrl: string) {
     this.publicClient = createPublicClient({
       chain: base,
       transport: http(rpcUrl),
@@ -87,117 +51,8 @@ export class LiquidSDK {
       paymaster: true,
     });
     this.aerodromeResolver = new AerodromeResolver(this.publicClient);
-    this.passKeyImpl = passKeyImpl;
-
-    this.api = new LiquidAPI(apiBaseUrl, apiKey);
   }
 
-  async createSmartAccount(
-    username: string,
-  ): Promise<{ address: Address; smartAccount: SmartAccount }> {
-    try {
-      const options = await this.api.getRegistrationOptions(username);
-      console.log('Registration options:', options);
-      const registrationResponse = await this.passKeyImpl.createPassKeyCredential(options);
-      console.log('Registration response:', registrationResponse);
-
-      const verificationResponse = await this.api.verifyRegistration(
-        username,
-        registrationResponse,
-      );
-      console.log('Verification response:', verificationResponse);
-
-      if (!verificationResponse.verified) {
-        throw new Error('Attestation verification failed');
-      }
-
-      const publicKey = this.getPublicKeyFromRegistrationResponse(registrationResponse);
-      console.log('Public key:', publicKey);
-
-      const credentialId = this.getCredentialIdFromRegistrationResponse(registrationResponse);
-
-      const webAuthnAccount: WebAuthnAccount = {
-        type: 'webAuthn',
-        publicKey: `0x${Array.from(publicKey)
-          .map((byte) => byte.toString(16).padStart(2, '0'))
-          .join('')}` as `0x${string}`,
-        sign: async ({ hash }: { hash: Hex }) => {
-          const signResult = await this.passKeyImpl.signWithPassKey({
-            challenge: hash,
-            allowCredentials: [{ id: credentialId, type: 'public-key' }],
-          });
-          return this.convertSignResultToSignReturnType(signResult, hash);
-        },
-        signMessage: async ({ message }: { message: SignableMessage }) => {
-          const hash = hashMessage(message);
-          return webAuthnAccount.sign({ hash });
-        },
-        signTypedData: async (typedData) => {
-          const hash = hashTypedData(typedData);
-          return webAuthnAccount.sign({ hash });
-        },
-      };
-
-      const smartAccount = await toCoinbaseSmartAccount({
-        client: this.publicClient,
-        owners: [webAuthnAccount],
-      });
-
-      const address = await smartAccount.getAddress();
-      await this.api.updateUserAddress(username, address);
-      return { address, smartAccount };
-    } catch (error) {
-      console.error('Error in createSmartAccount:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to create smart account: ${error.message}`);
-      } else {
-        throw new Error('Failed to create smart account: Unknown error');
-      }
-    }
-  }
-
-  private getPublicKeyFromRegistrationResponse(response: PasskeyRegistrationResult): Uint8Array {
-    let attestationObject: string;
-
-    if ('response' in response) {
-      attestationObject = response.response.attestationObject;
-    } else {
-      attestationObject = response.attestationObject;
-    }
-
-    console.log('Raw attestationObject:', attestationObject);
-    attestationObject = this.base64UrlToBase64(attestationObject);
-    console.log('Raw attestationObject After 1 :', attestationObject);
-    attestationObject = this.ensureProperBase64(attestationObject);
-    console.log('Raw attestationObject After 2:', attestationObject);
-    try {
-      return new Uint8Array(Buffer.from(attestationObject, 'base64'));
-    } catch (error) {
-      console.error('Error decoding attestationObject:', error);
-      throw new Error('Failed to decode attestationObject');
-    }
-  }
-
-  private getCredentialIdFromRegistrationResponse(response: PasskeyRegistrationResult): string {
-    if ('id' in response) {
-      // Web implementation
-      return response.id;
-    } else {
-      // Native implementation
-      return response.credentialId;
-    }
-  }
-
-  private base64UrlToBase64(base64url: string): string {
-    return base64url.replace(/-/g, '+').replace(/_/g, '/');
-  }
-  private ensureProperBase64(str: string): string {
-    str = str.replace(/[^A-Za-z0-9+/=]/g, '');
-    while (str.length % 4) {
-      str += '=';
-    }
-    return str;
-  }
   async executeStrategy(smartAccount: SmartAccount, actions: Action[]): Promise<string> {
     try {
       const calls = actions.map((action) => this.encodeAction(action));
@@ -345,60 +200,6 @@ export class LiquidSDK {
         throw new AerodromeError('Failed to get quote: Unknown error');
       }
     }
-  }
-
-  private convertSignatureToHex(signResult: PasskeyAuthResult): `0x${string}` {
-    let signature: string;
-
-    if ('response' in signResult) {
-      // Web authentication result
-      signature = signResult.response.signature;
-    } else {
-      // Native authentication result
-      signature = signResult.signature;
-    }
-    const signatureBuffer = Buffer.from(signature, 'base64');
-    const signatureHex = signatureBuffer.toString('hex');
-
-    return `0x${signatureHex}` as `0x${string}`;
-  }
-
-  private convertSignResultToSignReturnType(signResult: PasskeyAuthResult, challenge: Hex) {
-    let signature: string;
-    let authenticatorData: string;
-    let clientDataJSON: string;
-
-    if ('response' in signResult) {
-      // Web authentication result
-      signature = signResult.response.signature;
-      authenticatorData = signResult.response.authenticatorData;
-      clientDataJSON = signResult.response.clientDataJSON;
-    } else {
-      // Native authentication result
-      signature = signResult.signature;
-      authenticatorData = signResult.authenticatorData;
-      clientDataJSON = signResult.clientDataJSON;
-    }
-
-    signature = this.ensureProperBase64(signature);
-    authenticatorData = this.ensureProperBase64(authenticatorData);
-
-    const signatureHex = `0x${Buffer.from(signature, 'base64').toString('hex')}` as Hex;
-    const authenticatorDataHex =
-      `0x${Buffer.from(authenticatorData, 'base64').toString('hex')}` as Hex;
-
-    const webAuthnData = {
-      authenticatorData: authenticatorDataHex,
-      challengeIndex: clientDataJSON.indexOf(challenge.slice(2)),
-      clientDataJSON,
-      typeIndex: clientDataJSON.indexOf('"type":"webauthn.get"'),
-      userVerificationRequired: false,
-    };
-
-    return {
-      signature: signatureHex,
-      webauthn: webAuthnData,
-    };
   }
 
   /**
