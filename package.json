@@ -5,20 +5,11 @@
   "name": "liquid-sdk",
   "version": "1.0.0",
   "description": "Liquid SDK for React Native and Web",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/esm/index.d.ts",
-  "react-native": "./dist/native/index.native.js",
-  "exports": {
-    ".": {
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
-      "types": "./dist/esm/index.d.ts"
-    }
-  },
-  "files": [
-    "dist"
-  ],
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "react-native": "dist/index.native.js",
+  "types": "dist/index.d.ts",
+  "packageManager": "bun@1.1.30",
   "scripts": {
     "format": "prettier --write .",
     "build": "rollup -c",
