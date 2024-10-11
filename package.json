@@ -4,10 +4,9 @@
   "license": "ISC",
   "name": "liquid-sdk",
   "version": "1.0.0",
-  "description": "Liquid SDK for React Native and Web",
+  "description": "Liquid SDK",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-  "react-native": "dist/index.native.js",
   "types": "dist/index.d.ts",
   "packageManager": "bun@1.1.30",
   "scripts": {
